@@ -1,5 +1,5 @@
-import { httpGet } from "../api/https";
-import { ApiResponse, User } from "../types/api.types";
+import { httpGet } from "@/shared/api/https";
+import { ApiResponse, User } from "@/shared/types/api.types";
 
 export const userService = {
   getCurrentUser: async (): Promise<ApiResponse<User>> => {

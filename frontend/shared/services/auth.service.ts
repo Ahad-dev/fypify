@@ -1,5 +1,5 @@
-import { httpPost } from "../api/https";
-import { ApiResponse, LoginRequest, AuthResponse, RefreshTokenRequest } from "../types/api.types";
+import { httpPost } from "@/shared/api/https";
+import { ApiResponse, LoginRequest, AuthResponse, RefreshTokenRequest } from "@/shared/types/api.types";
 
 export const authService = {
   login: async (credentials: LoginRequest): Promise<ApiResponse<AuthResponse>> => {
