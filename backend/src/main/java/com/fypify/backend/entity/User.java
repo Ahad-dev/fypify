@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.util.UUID;
+
 /**
  * User Entity
  * 
@@ -37,7 +39,8 @@ import lombok.*;
  * - Bean Validation annotations for data integrity
  * - Proper indexing on frequently queried fields (email)
  * - Lombok for reducing boilerplate
- * - Immutable ID (no setter)
+ * - UUID for globally unique identifiers (better than sequential IDs)
+ * - Auto-generated UUID on persist
  */
 @Entity
 @Table(
@@ -55,8 +58,9 @@ import lombok.*;
 public class User extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false, columnDefinition = "UUID")
+    private UUID id;
 
     @NotBlank(message = "Name is required")
     @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")

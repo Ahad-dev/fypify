@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * User Repository Interface
@@ -43,7 +44,7 @@ import java.util.Optional;
  * - Proper method naming (Spring Data conventions)
  */
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, UUID> {
 
     /**
      * Find user by email (for authentication)

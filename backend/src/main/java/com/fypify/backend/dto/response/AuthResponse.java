@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 /**
  * Authentication Response DTO
  * 
@@ -33,7 +35,7 @@ public class AuthResponse {
     private Long expiresIn; // Access token expiration in seconds
     
     // User information
-    private Long userId;
+    private UUID userId;
     private String name;
     private String email;
     private String role;

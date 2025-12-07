@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 /**
@@ -70,13 +71,13 @@ public class JwtUtil {
      * 
      * @param email user email
      * @param role user role
-     * @param userId user ID
+     * @param userId user ID (UUID)
      * @return JWT access token
      */
-    public String generateAccessToken(String email, String role, Long userId) {
+    public String generateAccessToken(String email, String role, UUID userId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", role);
-        claims.put("userId", userId);
+        claims.put("userId", userId.toString());
         claims.put("tokenType", TokenType.ACCESS.getType());
         
         log.debug("Generating access token for user: {}", email);
@@ -88,12 +89,12 @@ public class JwtUtil {
      * Strategy Pattern: Refresh token generation strategy
      * 
      * @param email user email
-     * @param userId user ID
+     * @param userId user ID (UUID)
      * @return JWT refresh token
      */
-    public String generateRefreshToken(String email, Long userId) {
+    public String generateRefreshToken(String email, UUID userId) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", userId);
+        claims.put("userId", userId.toString());
         claims.put("tokenType", TokenType.REFRESH.getType());
         
         log.debug("Generating refresh token for user: {}", email);
@@ -136,10 +137,11 @@ public class JwtUtil {
      * Extract user ID from token
      * 
      * @param token JWT token
-     * @return user ID
+     * @return user ID (UUID)
      */
-    public Long extractUserId(String token) {
-        return extractClaim(token, claims -> claims.get("userId", Long.class));
+    public UUID extractUserId(String token) {
+        String userIdStr = extractClaim(token, claims -> claims.get("userId", String.class));
+        return userIdStr != null ? UUID.fromString(userIdStr) : null;
     }
 
     /**

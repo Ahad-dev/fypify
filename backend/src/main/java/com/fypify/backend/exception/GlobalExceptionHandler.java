@@ -90,4 +90,30 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
+
+    /**
+     * Handle resource not found exceptions
+     */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex) {
+        ErrorResponse response = ErrorResponse.create(
+            "RESOURCE_NOT_FOUND",
+            ex.getMessage()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    /**
+     * Handle duplicate resource exceptions
+     */
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateResourceException(DuplicateResourceException ex) {
+        ErrorResponse response = ErrorResponse.create(
+            "DUPLICATE_RESOURCE",
+            ex.getMessage()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
 }
