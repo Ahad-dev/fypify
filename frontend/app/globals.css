@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+/* ============================================
+   FYPIFY THEME - Custom Color System
+   ============================================ */
+
+:root {
+  /* Primary Colors - Brand Core */
+  --primary: #A122B5;
+  --primary-dark: #7F1A8A;
+  --primary-light: #E8C6EE;
+  --primary-extra-light: #F6EAF9;
+
+  /* Secondary Colors - Supporting UI */
+  --secondary: #3B82F6;
+  --secondary-dark: #1D4ED8;
+  --secondary-light: #DBEAFE;
+
+  /* Accent Colors - Attention Grabbers */
+  --accent: #FACC15;
+  --accent-dark: #EAB308;
+  --accent-light: #FEF3C7;
+
+  /* Neutral Colors - Base UI */
+  --neutral-light: #FFFFFF;
+  --neutral-grey: #F2F4F7;
+  --neutral-grey-light: #F8FAFC;
+  --neutral-dark: #1F2937;
+
+  /* Text Colors */
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+
+  /* Status Colors */
+  --success: #22C55E;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  --info: #3B82F6;
+
+  /* Shadow Colors */
+  --shadow: rgba(0, 0, 0, 0.08);
+  --shadow-lg: rgba(0, 0, 0, 0.12);
+  --shadow-xl: rgba(161, 34, 181, 0.25);
+
+  /* Legacy variables for compatibility */
+  --background: var(--neutral-light);
+  --foreground: var(--text-primary);
+}
+
+@theme inline {
+  /* Primary Colors */
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-light: var(--primary-light);
+  --color-primary-extra-light: var(--primary-extra-light);
+
+  /* Secondary Colors */
+  --color-secondary: var(--secondary);
+  --color-secondary-dark: var(--secondary-dark);
+  --color-secondary-light: var(--secondary-light);
+
+  /* Accent Colors */
+  --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-accent-light: var(--accent-light);
+
+  /* Neutral Colors */
+  --color-neutral-light: var(--neutral-light);
+  --color-neutral-grey: var(--neutral-grey);
+  --color-neutral-grey-light: var(--neutral-grey-light);
+  --color-neutral-dark: var(--neutral-dark);
+
+  /* Text Colors */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  /* Status Colors */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  /* Legacy */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Box Shadows */
+  --shadow-sm: 0 1px 2px 0 var(--shadow);
+  --shadow-md: 0 4px 6px -1px var(--shadow-lg);
+  --shadow-lg: 0 10px 15px -3px var(--shadow-lg);
+  --shadow-xl: 0 20px 25px -5px var(--shadow-xl);
+  --shadow-2xl: 0 25px 50px -12px var(--shadow-xl);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark mode overrides */
+    --background: var(--neutral-dark);
+    --foreground: #ededed;
+    --neutral-grey: #374151;
+    --neutral-grey-light: #1F2937;
+    --text-primary: #F8FAFC;
+    --text-secondary: #CBD5E1;
+    --text-muted: #94A3B8;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
