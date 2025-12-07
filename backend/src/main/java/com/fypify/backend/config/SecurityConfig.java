@@ -92,6 +92,9 @@ public class SecurityConfig {
             // Disable CSRF (not needed for stateless JWT)
             .csrf(AbstractHttpConfigurer::disable)
             
+            // Enable CORS with default settings (uses CorsFilter bean)
+            .cors(cors -> cors.configure(http))
+            
             // Configure authorization rules
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints (no authentication required)

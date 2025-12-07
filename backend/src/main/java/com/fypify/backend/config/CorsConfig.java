@@ -1,5 +1,6 @@
 package com.fypify.backend.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -16,6 +17,9 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
+    @Value("${frontend.url}")
+    private String frontendUrl;
+
     @Bean
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -23,7 +27,7 @@ public class CorsConfig {
         
         config.setAllowCredentials(true);
         config.setAllowedOrigins(List.of(
-            "http://localhost:3000",  // Next.js dev server
+            frontendUrl,  // Next.js dev server from application.properties
             "http://localhost:3001"   // Alternative port
         ));
         config.setAllowedHeaders(Arrays.asList("*"));

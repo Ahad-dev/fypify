@@ -23,6 +23,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -89,6 +90,67 @@ public class UserController {
      */
     public UserController(UserService userService) {
         this.userService = userService;
+    }
+
+    /**
+     * Get current authenticated user
+     * 
+     * Access: All authenticated users
+     * 
+     * @return current user details
+     */
+    @GetMapping("/me")
+    @Operation(
+        summary = "Get current user",
+        description = "Retrieve the currently authenticated user's details. Available to all authenticated users."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Current user retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class),
+                examples = @ExampleObject(
+                    value = """
+                        {
+                          "success": true,
+                          "message": "Current user retrieved successfully",
+                          "data": {
+                            "id": "550e8400-e29b-41d4-a716-446655440000",
+                            "name": "Admin User",
+                            "email": "admin@fypify.com",
+                            "role": "ADMIN",
+                            "isActive": true,
+                            "createdAt": "2025-12-07T10:00:00",
+                            "updatedAt": "2025-12-07T10:00:00"
+                          },
+                          "error": null
+                        }
+                        """
+                )
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - Invalid or missing token"
+        )
+    })
+    public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser() {
+        // Get email from SecurityContext
+        String userEmail = SecurityContextHolder.getContext()
+            .getAuthentication()
+            .getName();
+        
+        log.info("Fetching current user: {}", userEmail);
+        UserResponse user = userService.getUserByEmail(userEmail);
+        return ResponseEntity.ok(
+            ApiResponse.<UserResponse>builder()
+                .success(true)
+                .message("Current user retrieved successfully")
+                .data(user)
+                .build()
+        );
     }
 
     /**

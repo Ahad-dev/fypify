@@ -356,20 +356,43 @@ public class AuthController {
     }
 
     /**
-     * Optional: Logout endpoint (for future implementation)
+     * Logout endpoint (optional)
      * 
      * Note: JWT is stateless, so logout is typically handled client-side
-     * by deleting the tokens. However, you can implement:
+     * by deleting the tokens. This endpoint can be used for:
      * - Token blacklist
      * - Refresh token revocation in database
+     * - Audit logging
      * 
      * POST /api/auth/logout
      */
-    // @PostMapping("/logout")
-    // public ResponseEntity<ApiResponse<String>> logout() {
-    //     // Future implementation: revoke refresh token
-    //     return ResponseEntity.ok(
-    //         new ApiResponse<>(true, "Logged out successfully", null)
-    //     );
-    // }
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<String>> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            // Log the logout attempt
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                log.info("User logout attempt");
+            }
+            
+            // Since JWT is stateless, we just return success
+            // The client will delete the tokens
+            return ResponseEntity.ok(
+                ApiResponse.<String>builder()
+                    .success(true)
+                    .message("Logged out successfully")
+                    .data(null)
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Error during logout: {}", e.getMessage());
+            return ResponseEntity.ok(
+                ApiResponse.<String>builder()
+                    .success(true)
+                    .message("Logged out successfully")
+                    .data(null)
+                    .build()
+            );
+        }
+    }
 }
