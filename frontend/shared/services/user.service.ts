@@ -1,4 +1,4 @@
-import { httpGet } from "@/shared/api/https";
+import { httpGet } from "@/shared/api/http";
 import { ApiResponse, User } from "@/shared/types/api.types";
 
 export const userService = {

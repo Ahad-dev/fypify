@@ -1,4 +1,4 @@
-import { httpPost } from "@/shared/api/https";
+import { httpPost } from "@/shared/api/http";
 import { ApiResponse, LoginRequest, AuthResponse, RefreshTokenRequest } from "@/shared/types/api.types";
 
 export const authService = {
