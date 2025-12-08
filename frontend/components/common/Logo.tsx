@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 interface LogoProps {
   size?: "sm" | "md" | "lg" | "xl";
   showTagline?: boolean;
@@ -24,7 +26,7 @@ export default function Logo({ size = "md", showTagline = false, className = "" 
   return (
     <div className={`inline-flex flex-col items-center gap-2 ${className}`}>
       <div className="relative">
-        <img
+        <Image
           src="/Logo.png"
           alt="Fypify Logo"
           width={config.width}

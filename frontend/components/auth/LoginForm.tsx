@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Eye, EyeOff, Loader2, GraduationCap, Lock, Mail, Sparkles, Shield, Users } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Mail, Sparkles, Shield, Users } from "lucide-react";
 import Logo from "@/components/common/Logo";
 
 export default function LoginForm() {
@@ -115,6 +115,7 @@ export default function LoginForm() {
                 {loginMutation.isError && (
                   <Alert variant="destructive" className="animate-shake border-danger bg-danger-light">
                     <AlertDescription className="text-danger-dark font-medium">
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       {(loginMutation.error as any)?.response?.data?.error?.message ||
                         "Invalid credentials. Please check your email and password."}
                     </AlertDescription>

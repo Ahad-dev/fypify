@@ -4,7 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLogout } from "@/shared/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { 
   LogOut, User, Mail, Shield, CheckCircle, Clock, 
   GraduationCap, FileText, Users, TrendingUp, 
@@ -39,6 +38,7 @@ function DashboardContent() {
   };
 
   const getRoleIcon = (role: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const icons: Record<string, any> = {
       ADMIN: Shield,
       COMMITTEE: Users,
@@ -147,7 +147,7 @@ function DashboardContent() {
                 Welcome back, <span className="text-primary">{user?.name}</span>! 👋
               </h2>
               <p className="text-neutral-600 text-lg">
-                Here's an overview of your projects and activities
+                Here&apos;s an overview of your projects and activities
               </p>
             </div>
           </div>
