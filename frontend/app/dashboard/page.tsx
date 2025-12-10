@@ -1,349 +1,242 @@
-"use client";
+'use client';
 
-import { useAuth } from "@/contexts/AuthContext";
-import { useLogout } from "@/shared/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  LogOut, User, Mail, Shield, CheckCircle, Clock, 
-  GraduationCap, FileText, Users, TrendingUp, 
-  Calendar, Activity, Award, Bell, Settings,
-  FolderKanban, Target, BarChart3, AlertCircle
-} from "lucide-react";
-import AuthGuard from "@/components/guards/AuthGuard";
-import Logo from "@/components/common/Logo";
+import { useAuthContext } from '@/contexts/AuthContext';
+import { MainLayout } from '@/components/layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  FolderKanban,
+  Users,
+  FileText,
+  Calendar,
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
+import Link from 'next/link';
 
-function DashboardContent() {
-  const { user } = useAuth();
-  const logoutMutation = useLogout();
+export default function DashboardPage() {
+  const { user, isAdmin, isSupervisor, isStudent } = useAuthContext();
 
-  const handleLogout = async () => {
-    try {
-      await logoutMutation.mutateAsync();
-      window.location.href = "/login";
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
-
-  const getRoleBadgeVariant = (role: string) => {
-    const variants: Record<string, string> = {
-      ADMIN: "badge-danger",
-      COMMITTEE: "badge-primary",
-      SUPERVISOR: "badge-info",
-      EVALUATOR: "badge-warning",
-      STUDENT: "badge-success",
-    };
-    return variants[role] || "badge-secondary";
-  };
-
-  const getRoleIcon = (role: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const icons: Record<string, any> = {
-      ADMIN: Shield,
-      COMMITTEE: Users,
-      SUPERVISOR: Award,
-      EVALUATOR: Target,
-      STUDENT: GraduationCap,
-    };
-    const Icon = icons[role] || User;
-    return <Icon className="w-4 h-4" />;
+  // Mock stats - will be fetched from API
+  const stats = {
+    totalProjects: 12,
+    activeProjects: 8,
+    pendingProposals: 3,
+    upcomingMeetings: 5,
   };
 
   const quickActions = [
-    { icon: FolderKanban, label: "Create Project", color: "primary" },
-    { icon: FileText, label: "Submit Report", color: "secondary" },
-    { icon: Users, label: "Team Meeting", color: "info" },
-    { icon: Calendar, label: "Schedule Review", color: "accent" },
+    {
+      label: 'View Projects',
+      href: '/projects',
+      icon: FolderKanban,
+      description: 'Browse all your projects',
+    },
+    {
+      label: isStudent ? 'My Group' : 'View Groups',
+      href: isStudent ? '/groups/my' : '/groups',
+      icon: Users,
+      description: isStudent ? 'View your group details' : 'Manage student groups',
+    },
+    {
+      label: 'Proposals',
+      href: '/proposals',
+      icon: FileText,
+      description: isStudent ? 'Submit or view proposals' : 'Review pending proposals',
+    },
+    {
+      label: 'Meetings',
+      href: '/meetings',
+      icon: Calendar,
+      description: 'View scheduled meetings',
+    },
   ];
 
-  const stats = [
+  const recentActivities = [
     {
-      title: "Active Projects",
-      value: "0",
-      change: "+0%",
+      id: 1,
+      type: 'project',
+      message: 'Project "AI Chatbot" was updated',
+      time: '2 hours ago',
       icon: FolderKanban,
-      color: "primary",
-      trend: "up"
     },
     {
-      title: "Pending Tasks",
-      value: "0",
-      change: "0 overdue",
+      id: 2,
+      type: 'meeting',
+      message: 'Meeting scheduled with Dr. Ahmed',
+      time: '5 hours ago',
+      icon: Calendar,
+    },
+    {
+      id: 3,
+      type: 'proposal',
+      message: 'New proposal submitted for review',
+      time: '1 day ago',
       icon: FileText,
-      color: "warning",
-      trend: "neutral"
     },
     {
-      title: "Team Members",
-      value: "0",
-      change: "+0 this week",
+      id: 4,
+      type: 'group',
+      message: 'New member added to your group',
+      time: '2 days ago',
       icon: Users,
-      color: "info",
-      trend: "up"
-    },
-    {
-      title: "Completion Rate",
-      value: "0%",
-      change: "+0% from last month",
-      icon: TrendingUp,
-      color: "success",
-      trend: "up"
     },
   ];
 
   return (
-    <div className="min-h-screen gradient-bg">
-      {/* Enhanced Header */}
-      <header className="bg-white/95 backdrop-blur-xl shadow-sm border-b border-neutral-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <Logo size="md" showTagline={false} />
-            </div>
-
-            {/* Header Actions */}
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="relative hover:bg-neutral-100"
-              >
-                <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-danger rounded-full text-xs text-white flex items-center justify-center">
-                  0
-                </span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="hover:bg-neutral-100"
-              >
-                <Settings className="w-5 h-5" />
-              </Button>
-              <Button
-                onClick={handleLogout}
-                variant="outline"
-                size="sm"
-                className="border-neutral-200 hover:bg-neutral-50"
-                disabled={logoutMutation.isPending}
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                <span>Logout</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <MainLayout>
+      <div className="space-y-8">
         {/* Welcome Section */}
-        <div className="mb-8 animate-fade-in-down">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
-                Welcome back, <span className="text-primary">{user?.name}</span>! 👋
-              </h2>
-              <p className="text-neutral-600 text-lg">
-                Here&apos;s an overview of your projects and activities
-              </p>
-            </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              Welcome back, {user?.firstName}! 👋
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Here&apos;s what&apos;s happening with your projects today.
+            </p>
           </div>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-            {quickActions.map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <button
-                  key={index}
-                  className="btn btn-ghost bg-white hover:bg-neutral-50 border border-neutral-200 py-4 justify-start animate-fade-in-up"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <Icon className={`w-5 h-5 text-${action.color}`} />
-                  <span className="text-sm font-medium">{action.label}</span>
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Badge variant="destructive" className="px-3 py-1">
+                Admin
+              </Badge>
+            )}
+            {isSupervisor && !isAdmin && (
+              <Badge variant="default" className="px-3 py-1">
+                Supervisor
+              </Badge>
+            )}
+            {isStudent && (
+              <Badge variant="secondary" className="px-3 py-1">
+                Student
+              </Badge>
+            )}
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card 
-                key={index} 
-                className="bg-white/80 backdrop-blur-sm border-neutral-200 hover:shadow-lg transition-all duration-300 animate-fade-in-up"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`w-12 h-12 rounded-xl bg-${stat.color}/10 flex items-center justify-center`}>
-                      <Icon className={`w-6 h-6 text-${stat.color}`} />
-                    </div>
-                    {stat.trend === "up" && (
-                      <div className="flex items-center gap-1 text-success text-sm font-medium">
-                        <TrendingUp className="w-4 h-4" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-neutral-600 font-medium">{stat.title}</p>
-                    <p className="text-3xl font-bold text-neutral-900">{stat.value}</p>
-                    <p className="text-xs text-neutral-500">{stat.change}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* User Profile Card */}
-          <Card className="lg:col-span-1 bg-white/80 backdrop-blur-sm border-neutral-200 animate-fade-in-left">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <User className="w-5 h-5 text-primary" />
-                <span>Profile Information</span>
-              </CardTitle>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
+              <FolderKanban className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Profile Header */}
-              <div className="flex items-center gap-4 pb-4 border-b border-neutral-200">
-                <div className="relative">
-                  <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-primary to-primary-dark flex items-center justify-center text-white text-3xl font-bold shadow-xl">
-                    {user?.name.charAt(0)}
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-success rounded-full border-4 border-white"></div>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-lg text-neutral-900 mb-1">{user?.name}</h3>
-                  <div className={`badge ${getRoleBadgeVariant(user?.role || "")} inline-flex items-center gap-1`}>
-                    {getRoleIcon(user?.role || "")}
-                    <span>{user?.role}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Profile Details */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg">
-                  <Mail className="w-5 h-5 text-neutral-400" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-neutral-500 mb-0.5">Email Address</p>
-                    <p className="text-sm text-neutral-900 font-medium truncate">{user?.email}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg">
-                  <Shield className="w-5 h-5 text-neutral-400" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-neutral-500 mb-0.5">User ID</p>
-                    <p className="text-sm text-neutral-900 font-mono">{user?.id.slice(0, 8)}...</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 bg-success-light rounded-lg">
-                  <CheckCircle className="w-5 h-5 text-success-dark" />
-                  <div className="flex-1">
-                    <p className="text-sm text-success-dark font-semibold">Account Active</p>
-                    <p className="text-xs text-success-dark/70">All systems operational</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <Button className="w-full btn-outline border-2">
-                <User className="w-4 h-4 mr-2" />
-                Edit Profile
-              </Button>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalProjects}</div>
+              <p className="text-xs text-muted-foreground">
+                <TrendingUp className="inline h-3 w-3 mr-1 text-success" />
+                +2 from last month
+              </p>
             </CardContent>
           </Card>
 
-          {/* Activity & Recent Updates */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Recent Activity */}
-            <Card className="bg-white/80 backdrop-blur-sm border-neutral-200 animate-fade-in-up">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Activity className="w-5 h-5 text-primary" />
-                    <span>Recent Activity</span>
-                  </CardTitle>
-                  <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
-                    View All
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-16">
-                  <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-4">
-                    <Clock className="w-8 h-8 text-neutral-400" />
-                  </div>
-                  <p className="text-neutral-600 font-medium mb-2">No recent activity</p>
-                  <p className="text-sm text-neutral-500 max-w-sm mx-auto">
-                    Your activity timeline will appear here once you start working on projects
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-success" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.activeProjects}</div>
+              <p className="text-xs text-muted-foreground">
+                {Math.round((stats.activeProjects / stats.totalProjects) * 100)}% of total
+              </p>
+            </CardContent>
+          </Card>
 
-            {/* Upcoming Deadlines */}
-            <Card className="bg-white/80 backdrop-blur-sm border-neutral-200 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <AlertCircle className="w-5 h-5 text-warning" />
-                  <span>Upcoming Deadlines</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-4">
-                    <Calendar className="w-8 h-8 text-neutral-400" />
-                  </div>
-                  <p className="text-neutral-600 font-medium mb-2">No upcoming deadlines</p>
-                  <p className="text-sm text-neutral-500 max-w-sm mx-auto">
-                    Project deadlines and milestones will be displayed here
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Proposals</CardTitle>
+              <AlertCircle className="h-4 w-4 text-warning" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.pendingProposals}</div>
+              <p className="text-xs text-muted-foreground">
+                Awaiting review
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Upcoming Meetings</CardTitle>
+              <Clock className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.upcomingMeetings}</div>
+              <p className="text-xs text-muted-foreground">
+                This week
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Performance Chart Placeholder */}
-        <Card className="mt-6 bg-white/80 backdrop-blur-sm border-neutral-200 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <BarChart3 className="w-5 h-5 text-primary" />
-              <span>Performance Overview</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-16">
-              <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-4">
-                <BarChart3 className="w-8 h-8 text-neutral-400" />
-              </div>
-              <p className="text-neutral-600 font-medium mb-2">Performance analytics coming soon</p>
-              <p className="text-sm text-neutral-500 max-w-sm mx-auto">
-                Track your progress and project statistics with interactive charts
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
-  );
-}
+        {/* Quick Actions & Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>Common tasks you might want to do</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-3">
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Link key={action.href} href={action.href}>
+                    <Button
+                      variant="outline"
+                      className="w-full h-auto flex-col items-start p-4 gap-2 hover:bg-primary/5 hover:border-primary/50"
+                    >
+                      <Icon className="h-5 w-5 text-primary" />
+                      <div className="text-left">
+                        <div className="font-medium">{action.label}</div>
+                        <div className="text-xs text-muted-foreground font-normal">
+                          {action.description}
+                        </div>
+                      </div>
+                    </Button>
+                  </Link>
+                );
+              })}
+            </CardContent>
+          </Card>
 
-export default function DashboardPage() {
-  return (
-    <AuthGuard>
-      <DashboardContent />
-    </AuthGuard>
+          {/* Recent Activity */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>Latest updates in your workspace</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentActivities.map((activity) => {
+                  const Icon = activity.icon;
+                  return (
+                    <div
+                      key={activity.id}
+                      className="flex items-start gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Icon className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground">{activity.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {activity.time}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </MainLayout>
   );
 }

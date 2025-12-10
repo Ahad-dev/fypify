@@ -32,6 +32,9 @@ FROM eclipse-temurin:21-jre-alpine
 LABEL maintainer="fypify@example.com"
 LABEL description="FYPIFY Backend API - Final Year Project Management System"
 
+# Install curl for health check (must be done as root)
+RUN apk add --no-cache curl
+
 # Set working directory
 WORKDIR /app
 
@@ -52,7 +55,7 @@ EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
 
 # JVM options for optimal performance
 ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"

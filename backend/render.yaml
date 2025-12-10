@@ -1,10 +1,19 @@
 # Render Blueprint for FYPIFY Backend
 # This file configures automatic deployment on Render
+# 
+# IMPORTANT: Set these environment variables in Render Dashboard (not in this file):
+# - DATABASE_URL
+# - DB_USERNAME  
+# - DB_PASSWORD
+# - JWT_SECRET
+# - CLOUDINARY_CLOUD_NAME (optional)
+# - CLOUDINARY_API_KEY (optional)
+# - CLOUDINARY_API_SECRET (optional)
 
 services:
   - type: web
     name: fypify-backend
-    env: docker
+    runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free # Change to 'starter' or higher for production
     region: oregon # or singapore, frankfurt, ohio
@@ -14,48 +23,42 @@ services:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       
-      - key: SERVER_PORT
+      - key: PORT
         value: 8080
       
-      # Database Configuration (NeonDB)
-      - key: SPRING_DATASOURCE_URL
-        value: jdbc:postgresql://ep-solitary-mountain-ade09kl7-pooler.c-2.us-east-1.aws.neon.tech/neondb?user=neondb_owner&password=npg_FTtZwKx0chn4&sslmode=require&channelBinding=require
+      # Database Configuration - Set in Render Dashboard for security
+      - key: DATABASE_URL
+        sync: false # Must be set manually in Render Dashboard
       
-      - key: SPRING_DATASOURCE_USERNAME
-        value: neondb_owner
+      - key: DB_USERNAME
+        sync: false
       
-      - key: SPRING_DATASOURCE_PASSWORD
-        value: npg_FTtZwKx0chn4
-      
-      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
-        value: update
+      - key: DB_PASSWORD
+        sync: false
       
       # JWT Configuration
       - key: JWT_SECRET
         generateValue: true # Render will generate a secure random value
       
-      - key: JWT_ACCESS_EXPIRATION
-        value: 900000 # 15 minutes
-      
-      - key: JWT_REFRESH_EXPIRATION
-        value: 604800000 # 7 days
+      - key: JWT_EXPIRATION
+        value: "86400000" # 24 hours
       
       # Frontend URL (update after deploying frontend)
       - key: FRONTEND_URL
-        value: http://localhost:3000 # Replace with your Vercel URL
+        value: https://your-frontend.vercel.app
       
       # Logging
-      - key: LOGGING_LEVEL_COM_FYPIFY_BACKEND
+      - key: LOGGING_LEVEL_ROOT
         value: INFO
       
-      - key: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
-        value: WARN
+      - key: LOGGING_LEVEL_COM_FYPIFY
+        value: INFO
+      
+      - key: LOGGING_LEVEL_COM_FYPIFY
+        value: INFO
     
     # Health check endpoint
     healthCheckPath: /actuator/health
-    
-    # Build settings
-    dockerCommand: ""
     
     # Auto-deploy on git push
     autoDeploy: true

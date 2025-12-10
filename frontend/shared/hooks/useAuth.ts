@@ -1,49 +1,118 @@
-"use client";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { authService } from '@/shared/services';
+import { QUERY_KEYS } from '@/shared/constants/queryKeys';
+import {
+  LoginRequest,
+  RegisterRequest,
+  ChangePasswordRequest,
+  UpdateProfileRequest,
+} from '@/shared/types';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
-import { useMutation, UseMutationResult } from "@tanstack/react-query";
-import { authService } from "../services/auth.service";
-import { LoginRequest, AuthResponse, ApiResponse } from "../types/api.types";
-import { useAuth } from "@/contexts/AuthContext";
+/**
+ * Hook to get current user
+ */
+export function useCurrentUser() {
+  return useQuery({
+    queryKey: QUERY_KEYS.auth.me(),
+    queryFn: authService.getCurrentUser,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+}
 
-export const useLogin = (): UseMutationResult<
-  ApiResponse<AuthResponse>,
-  Error,
-  LoginRequest
-> => {
-  const { login: authLogin } = useAuth();
+/**
+ * Hook for login
+ */
+export function useLogin() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
 
   return useMutation({
-    mutationFn: authService.login,
+    mutationFn: (credentials: LoginRequest) => authService.login(credentials),
     onSuccess: (data) => {
-      const { accessToken, refreshToken, userId, name, email, role } = data.data;
-        
-      // Store tokens
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
-
-      // Update auth context
-      authLogin({
-        id: userId,
-        name,
-        email,
-        role,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+      queryClient.setQueryData(QUERY_KEYS.auth.me(), data.user);
+      toast.success('Welcome back!');
+      router.push('/dashboard');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Login failed');
     },
   });
-};
+}
 
-export const useLogout = () => {
-  const { logout: authLogout } = useAuth();
+/**
+ * Hook for registration
+ */
+export function useRegister() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: (data: RegisterRequest) => authService.register(data),
+    onSuccess: (data) => {
+      queryClient.setQueryData(QUERY_KEYS.auth.me(), data.user);
+      toast.success('Account created successfully!');
+      router.push('/dashboard');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Registration failed');
+    },
+  });
+}
+
+/**
+ * Hook for logout
+ */
+export function useLogout() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
 
   return useMutation({
     mutationFn: authService.logout,
     onSuccess: () => {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      authLogout();
+      queryClient.clear();
+      toast.success('Logged out successfully');
+      router.push('/login');
+    },
+    onError: () => {
+      // Still clear and redirect even on error
+      queryClient.clear();
+      router.push('/login');
     },
   });
-};
+}
+
+/**
+ * Hook for changing password
+ */
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (data: ChangePasswordRequest) => authService.changePassword(data),
+    onSuccess: () => {
+      toast.success('Password changed successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to change password');
+    },
+  });
+}
+
+/**
+ * Hook for updating profile
+ */
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: UpdateProfileRequest) => authService.updateProfile(data),
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(QUERY_KEYS.auth.me(), updatedUser);
+      toast.success('Profile updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update profile');
+    },
+  });
+}

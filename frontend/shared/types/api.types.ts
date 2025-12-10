@@ -1,68 +1,69 @@
-// API Response Types
-export interface ApiResponse<T> {
+/**
+ * Common API Types
+ */
+
+// Generic API response wrapper (matches backend ApiResponse)
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data: T;
-  error: ApiError | null;
+  timestamp: string;
 }
 
+// Paginated response
+export interface PaginatedResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+}
+
+// API Error response
 export interface ApiError {
-  code: string;
+  success: false;
   message: string;
-  details: any;
+  errors?: Record<string, string[]>;
+  timestamp: string;
+  path?: string;
+  status?: number;
 }
 
-// Auth Types
-export interface LoginRequest {
-  email: string;
-  password: string;
+// Pagination params
+export interface PaginationParams {
+  page?: number;
+  size?: number;
+  sort?: string;
+  direction?: 'asc' | 'desc';
 }
 
-export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-  tokenType: string;
-  expiresIn: number;
-  userId: string;
-  name: string;
-  email: string;
-  role: UserRole;
+// Common filter params
+export interface FilterParams extends PaginationParams {
+  search?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
-export interface RefreshTokenRequest {
-  refreshToken: string;
+// Select option type
+export interface SelectOption<T = string> {
+  label: string;
+  value: T;
+  disabled?: boolean;
 }
 
-// User Types
-export enum UserRole {
-  STUDENT = "STUDENT",
-  SUPERVISOR = "SUPERVISOR",
-  EVALUATOR = "EVALUATOR",
-  COMMITTEE = "COMMITTEE",
-  ADMIN = "ADMIN",
+// File upload response
+export interface FileUploadResponse {
+  url: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
 }
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+// Sort direction
+export type SortDirection = 'asc' | 'desc';
 
-export interface CreateUserRequest {
-  name: string;
-  email: string;
-  password: string;
-  role: UserRole;
-  isActive?: boolean;
-}
-
-export interface UpdateUserRequest {
-  name?: string;
-  email?: string;
-  password?: string;
-  isActive?: boolean;
-}
+// Common status types
+export type CommonStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'ARCHIVED';

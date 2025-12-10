@@ -1,85 +1,143 @@
-import axios, { AxiosInstance, AxiosError, AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { toast } from 'sonner';
 
-const api: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api",
-  timeout: 30000,
-  headers: {
-    "Content-Type": "application/json",
+// Token storage keys
+const ACCESS_TOKEN_KEY = 'fypify_access_token';
+const REFRESH_TOKEN_KEY = 'fypify_refresh_token';
+
+// API Response types
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  message: string;
+  data: T;
+  timestamp: string;
+}
+
+export interface ApiErrorResponse {
+  success: boolean;
+  message: string;
+  errors?: Record<string, string[]>;
+  timestamp: string;
+}
+
+// Token management utilities
+export const tokenStorage = {
+  getAccessToken: (): string | null => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
   },
-});
-
-// 🧠 Add access token to each request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("accessToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// 🚦 Token refresh management
-let isRefreshing = false;
-let failedQueue: any[] = [];
-
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) prom.reject(error);
-    else prom.resolve(token);
-  });
-  failedQueue = [];
+  
+  getRefreshToken: (): string | null => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
+  },
+  
+  setTokens: (accessToken: string, refreshToken?: string): void => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    if (refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    }
+  },
+  
+  clearTokens: (): void => {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  },
+  
+  hasToken: (): boolean => {
+    return !!tokenStorage.getAccessToken();
+  },
 };
 
-// 🔁 Unified response interceptor
+// Create axios instance
+const api: AxiosInstance = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1',
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true,
+});
+
+// Request interceptor - Add auth token
+api.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const token = tokenStorage.getAccessToken();
+    
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    return config;
+  },
+  (error: AxiosError) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor - Handle errors and token refresh
 api.interceptors.response.use(
-  (res: AxiosResponse) => res,
-  async (error: AxiosError<any>) => {
-    const originalRequest: any = error.config;
-
-    // Only handle 401 (unauthorized) once per request
+  (response) => response,
+  async (error: AxiosError<ApiErrorResponse>) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    
+    // Handle 401 Unauthorized
     if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return api(originalRequest);
-          })
-          .catch((err) => Promise.reject(err));
-      }
-
       originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        const refreshToken = localStorage.getItem("refreshToken");
-        const { data } = await axios.post("http://localhost:8080/api/auth/refresh", {
-          refreshToken,
-        });
-
-        const newAccessToken = data.data.accessToken;
-        const newRefreshToken = data.data.refreshToken;
-
-        localStorage.setItem("accessToken", newAccessToken);
-        localStorage.setItem("refreshToken", newRefreshToken);
-
-        api.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
-        processQueue(null, newAccessToken);
-
-        // Retry the failed request
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        return api(originalRequest);
-      } catch (refreshError) {
-        processQueue(refreshError, null);
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        // window.location.href = "/login";
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
+      
+      // Clear tokens and redirect to login
+      tokenStorage.clearTokens();
+      
+      // Only redirect if on client side
+      if (typeof window !== 'undefined') {
+        // Emit custom event for auth context to handle
+        window.dispatchEvent(new CustomEvent('auth:logout'));
+        
+        // Redirect to login page
+        const currentPath = window.location.pathname;
+        if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
+          window.location.href = '/login';
+        }
+      }
+      
+      return Promise.reject(error);
+    }
+    
+    // Handle 403 Forbidden
+    if (error.response?.status === 403) {
+      toast.error('You do not have permission to perform this action');
+    }
+    
+    // Handle 404 Not Found
+    if (error.response?.status === 404) {
+      toast.error('Resource not found');
+    }
+    
+    // Handle 422 Validation Error
+    if (error.response?.status === 422) {
+      const errors = error.response.data?.errors;
+      if (errors) {
+        const firstError = Object.values(errors)[0];
+        if (Array.isArray(firstError) && firstError.length > 0) {
+          toast.error(firstError[0]);
+        }
+      } else {
+        toast.error(error.response.data?.message || 'Validation failed');
       }
     }
-
+    
+    // Handle 500 Server Error
+    if (error.response?.status && error.response.status >= 500) {
+      toast.error('Server error. Please try again later.');
+    }
+    
+    // Handle network errors
+    if (!error.response) {
+      toast.error('Network error. Please check your connection.');
+    }
+    
     return Promise.reject(error);
   }
 );
