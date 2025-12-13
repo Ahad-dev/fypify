@@ -23,35 +23,55 @@ import java.util.UUID;
 public class JwtTokenProvider {
 
     private final SecretKey secretKey;
-    private final long jwtExpiration;
+    private final long accessTokenExpiration;
+    private final long refreshTokenExpiration;
 
     public JwtTokenProvider(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration}") long jwtExpiration
+            @Value("${jwt.access-expiration:900000}") long accessTokenExpiration,
+            @Value("${jwt.refresh-expiration:604800000}") long refreshTokenExpiration
     ) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.jwtExpiration = jwtExpiration;
+        this.accessTokenExpiration = accessTokenExpiration;
+        this.refreshTokenExpiration = refreshTokenExpiration;
     }
 
     /**
-     * Generate JWT token from Authentication object.
+     * Generate access token from Authentication object.
      */
-    public String generateToken(Authentication authentication) {
+    public String generateAccessToken(Authentication authentication) {
         UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-        return generateToken(userPrincipal.getId(), userPrincipal.getEmail(), userPrincipal.getRole());
+        return generateAccessToken(userPrincipal.getId(), userPrincipal.getEmail(), userPrincipal.getRole());
     }
 
     /**
-     * Generate JWT token from user details.
+     * Generate access token from user details.
      */
-    public String generateToken(UUID userId, String email, String role) {
+    public String generateAccessToken(UUID userId, String email, String role) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpiration);
+        Date expiryDate = new Date(now.getTime() + accessTokenExpiration);
 
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("email", email)
                 .claim("role", role)
+                .claim("type", "access")
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(secretKey)
+                .compact();
+    }
+
+    /**
+     * Generate refresh token.
+     */
+    public String generateRefreshToken(UUID userId) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + refreshTokenExpiration);
+
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claim("type", "refresh")
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(secretKey)
@@ -98,6 +118,22 @@ public class JwtTokenProvider {
     }
 
     /**
+     * Check if token is a refresh token.
+     */
+    public boolean isRefreshToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return "refresh".equals(claims.get("type", String.class));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
      * Validate JWT token.
      */
     public boolean validateToken(String authToken) {
@@ -122,9 +158,24 @@ public class JwtTokenProvider {
     }
 
     /**
-     * Get JWT expiration time in milliseconds.
+     * Get access token expiration time in milliseconds.
      */
+    public long getAccessTokenExpiration() {
+        return accessTokenExpiration;
+    }
+
+    /**
+     * Get refresh token expiration time in milliseconds.
+     */
+    public long getRefreshTokenExpiration() {
+        return refreshTokenExpiration;
+    }
+
+    /**
+     * @deprecated Use getAccessTokenExpiration() instead
+     */
+    @Deprecated
     public long getJwtExpiration() {
-        return jwtExpiration;
+        return accessTokenExpiration;
     }
 }

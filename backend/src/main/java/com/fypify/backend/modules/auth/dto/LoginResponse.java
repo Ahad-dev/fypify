@@ -15,14 +15,16 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LoginResponse {
 
-    private String token;
+    private String accessToken;
+    private String refreshToken;
     private String tokenType;
     private Long expiresIn;
     private UserDto user;
 
-    public static LoginResponse of(String token, Long expiresIn, UserDto user) {
+    public static LoginResponse of(String accessToken, String refreshToken, Long expiresIn, UserDto user) {
         return LoginResponse.builder()
-                .token(token)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(expiresIn)
                 .user(user)
