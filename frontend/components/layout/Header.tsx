@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { gsap } from 'gsap';
 import {
   Menu,
   X,
@@ -34,47 +36,66 @@ import { cn } from '@/lib/utils';
 
 // Navigation items based on user role
 const getNavigationItems = (isAdmin: boolean, isSupervisor: boolean, isStudent: boolean) => {
-  const items = [
-    {
+  const items: { name: string; href: string; icon: typeof LayoutDashboard; roles: string[] }[] = [];
+
+  // Add role-specific dashboard
+  if (isAdmin) {
+    items.push({
       name: 'Dashboard',
-      href: '/dashboard',
+      href: '/admin/dashboard',
       icon: LayoutDashboard,
-      roles: ['all'],
-    },
-    {
-      name: 'Projects',
-      href: '/projects',
-      icon: FolderKanban,
-      roles: ['all'],
-    },
-  ];
+      roles: ['ADMIN'],
+    });
+  } else if (isSupervisor) {
+    items.push({
+      name: 'Dashboard',
+      href: '/supervisor/dashboard',
+      icon: LayoutDashboard,
+      roles: ['SUPERVISOR'],
+    });
+  } else if (isStudent) {
+    items.push({
+      name: 'Dashboard',
+      href: '/student/dashboard',
+      icon: LayoutDashboard,
+      roles: ['STUDENT'],
+    });
+  }
+
+  // Common items
+  items.push({
+    name: 'Projects',
+    href: '/projects',
+    icon: FolderKanban,
+    roles: ['all'],
+  });
 
   if (isStudent) {
     items.push({
       name: 'My Group',
-      href: '/groups/my',
+      href: '/student/group',
       icon: Users,
       roles: ['STUDENT'],
     });
     items.push({
       name: 'Proposals',
-      href: '/proposals',
+      href: '/student/proposals',
       icon: FileText,
       roles: ['STUDENT'],
     });
   }
 
-  if (isSupervisor) {
+  if (isSupervisor && !isAdmin) {
     items.push({
       name: 'Groups',
-      href: '/groups',
+      href: '/supervisor/groups',
       icon: Users,
       roles: ['SUPERVISOR'],
     });
     items.push({
-      name: 'Meetings',
-      href: '/meetings',
-      icon: Calendar,
+      name: 'Proposals',
+      href: '/supervisor/proposals',
+      icon: FileText,
       roles: ['SUPERVISOR'],
     });
   }
@@ -101,37 +122,97 @@ export function Header() {
   const pathname = usePathname();
   const { user, logout, isAdmin, isSupervisor, isStudent } = useAuthContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const logoRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const bellRef = useRef<HTMLButtonElement>(null);
 
   const navigationItems = getNavigationItems(isAdmin, isSupervisor, isStudent);
 
-  const getInitials = (firstName?: string, lastName?: string) => {
-    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || 'U';
+  // GSAP animations on mount
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // Animate header entrance
+      gsap.from(headerRef.current, {
+        y: -20,
+        opacity: 0,
+        duration: 0.5,
+        ease: 'power3.out',
+      });
+
+      // Animate logo
+      gsap.from(logoRef.current, {
+        scale: 0.8,
+        opacity: 0,
+        duration: 0.5,
+        delay: 0.2,
+        ease: 'back.out(1.7)',
+      });
+    }, headerRef);
+
+    return () => ctx.revert();
+  }, []);
+
+  // Bell icon hover animation
+  const handleBellHover = (isEntering: boolean) => {
+    if (bellRef.current) {
+      gsap.to(bellRef.current, {
+        rotation: isEntering ? 15 : 0,
+        scale: isEntering ? 1.1 : 1,
+        duration: 0.3,
+        ease: 'power2.out',
+      });
+    }
+  };
+
+  const getInitials = (fullName?: string) => {
+    if (!fullName) return 'U';
+    const parts = fullName.split(' ');
+    return parts.map(p => p[0]).join('').toUpperCase().slice(0, 2);
   };
 
   const getRoleBadge = () => {
-    if (isAdmin) return { label: 'Admin', variant: 'destructive' as const };
-    if (isSupervisor) return { label: 'Supervisor', variant: 'default' as const };
-    if (isStudent) return { label: 'Student', variant: 'secondary' as const };
-    return null;
+    if (!user?.role) return null;
+    const roleLabels: Record<string, { label: string; variant: 'destructive' | 'default' | 'secondary' }> = {
+      ADMIN: { label: 'Admin', variant: 'destructive' },
+      SUPERVISOR: { label: 'Supervisor', variant: 'default' },
+      STUDENT: { label: 'Student', variant: 'secondary' },
+      FYP_COMMITTEE: { label: 'FYP Committee', variant: 'default' },
+      EVALUATION_COMMITTEE: { label: 'Evaluator', variant: 'default' },
+    };
+    return roleLabels[user.role] || null;
   };
 
   const roleBadge = getRoleBadge();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header 
+      ref={headerRef}
+      className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+    >
       <div className="container flex h-16 items-center justify-between px-4 mx-auto">
         {/* Logo */}
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary text-white shadow-md">
-            <GraduationCap className="w-5 h-5" />
+        <Link href="/dashboard" className="flex items-center gap-2 group">
+          <div 
+            ref={logoRef}
+            className="flex items-center justify-center w-9 h-9 rounded-lg overflow-hidden shadow-md transition-transform duration-300 group-hover:scale-105"
+          >
+            <Image
+              src="/Logo.png"
+              alt="FYPIFY Logo"
+              width={36}
+              height={36}
+              className="object-cover"
+              priority
+            />
           </div>
-          <span className="text-xl font-bold text-primary hidden sm:inline-block">
+          <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent hidden sm:inline-block">
             FYPIFY
           </span>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav ref={navRef} className="hidden md:flex items-center gap-1">
           {navigationItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -141,10 +222,10 @@ export function Header() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                  'flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200',
                   isActive
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? 'bg-primary/10 text-primary shadow-sm'
+                    : 'text-neutral-600 hover:bg-primary/5 hover:text-primary'
                 )}
               >
                 <Icon className="w-4 h-4" />
@@ -157,24 +238,33 @@ export function Header() {
         {/* Right side actions */}
         <div className="flex items-center gap-2">
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
+          <Button 
+            ref={bellRef}
+            variant="ghost" 
+            size="icon" 
+            className="relative hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary transition-colors duration-200"
+            onMouseEnter={() => handleBellHover(true)}
+            onMouseLeave={() => handleBellHover(false)}
+          >
             <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full animate-pulse" />
           </Button>
 
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 px-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.profileImageUrl} alt={user?.firstName} />
-                  <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                    {getInitials(user?.firstName, user?.lastName)}
+              <Button 
+                variant="ghost" 
+                className="flex items-center p-6 gap-2  hover:bg-primary/5 focus:bg-primary/5 transition-colors duration-200 "
+              >
+                <Avatar className="h-8 w-8 ring-2 ring-transparent hover:ring-primary/20 transition-all duration-200">
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-sm font-medium">
+                    {getInitials(user?.fullName)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden lg:flex flex-col items-start">
                   <span className="text-sm font-medium">
-                    {user?.firstName} {user?.lastName}
+                    {user?.fullName}
                   </span>
                   {roleBadge && (
                     <Badge variant={roleBadge.variant} className="text-xs px-1 py-0">
@@ -185,24 +275,30 @@ export function Header() {
                 <ChevronDown className="h-4 w-4 text-muted-foreground hidden lg:block" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-56 p-2">
+              <DropdownMenuLabel className="pb-2">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium">
-                    {user?.firstName} {user?.lastName}
+                    {user?.fullName}
                   </p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                <Link 
+                  href="/profile" 
+                  className="flex items-center gap-2 cursor-pointer rounded-md transition-colors duration-150 hover:bg-primary/10 hover:text-primary focus:bg-primary/10 focus:text-primary"
+                >
                   <User className="w-4 h-4" />
                   Profile
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/settings" className="flex items-center gap-2 cursor-pointer">
+                <Link 
+                  href="/settings" 
+                  className="flex items-center gap-2 cursor-pointer rounded-md transition-colors duration-150 hover:bg-primary/10 hover:text-primary focus:bg-primary/10 focus:text-primary"
+                >
                   <Settings className="w-4 h-4" />
                   Settings
                 </Link>
@@ -210,7 +306,7 @@ export function Header() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => logout()}
-                className="text-destructive focus:text-destructive cursor-pointer"
+                className="text-destructive cursor-pointer rounded-md transition-colors duration-150 hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive"
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
@@ -222,7 +318,7 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden hover:bg-primary/5 focus:bg-primary/5 transition-colors duration-200"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -244,10 +340,10 @@ export function Header() {
                   href={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={cn(
-                    'flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                    'flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200',
                     isActive
                       ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      : 'text-muted-foreground hover:bg-primary/5 hover:text-primary'
                   )}
                 >
                   <Icon className="w-5 h-5" />

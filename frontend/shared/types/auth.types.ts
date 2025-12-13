@@ -10,19 +10,14 @@ export type UserRole =
   | 'FYP_COMMITTEE'
   | 'EVALUATION_COMMITTEE';
 
-// User entity from API
+// User entity from API (matches backend UserDto)
 export interface User {
   id: string;
+  fullName: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  rollNumber?: string;
-  department?: string;
-  profileImageUrl?: string;
-  roles: UserRole[];
+  role: UserRole;  // Single role from backend
   isActive: boolean;
   createdAt: string;
-  updatedAt: string;
 }
 
 // Login request payload
@@ -31,21 +26,18 @@ export interface LoginRequest {
   password: string;
 }
 
-// Register request payload
+// Register request payload (admin only)
 export interface RegisterRequest {
+  fullName: string;
   email: string;
   password: string;
-  confirmPassword: string;
-  firstName: string;
-  lastName: string;
-  rollNumber?: string;
-  department?: string;
+  role: UserRole;
 }
 
 // Auth response from login/register
 export interface AuthResponse {
   accessToken: string;
-  refreshToken?: string;
+  refreshToken: string;
   tokenType: string;
   expiresIn: number;
   user: User;
@@ -55,7 +47,6 @@ export interface AuthResponse {
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
-  confirmPassword: string;
 }
 
 // Reset password request
@@ -72,10 +63,7 @@ export interface ConfirmResetPasswordRequest {
 
 // Update profile request
 export interface UpdateProfileRequest {
-  firstName?: string;
-  lastName?: string;
-  department?: string;
-  profileImageUrl?: string;
+  fullName?: string;
 }
 
 // Auth state in context

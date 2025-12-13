@@ -142,26 +142,11 @@ export default function LoginPage() {
           )}
         </Button>
 
-        {/* Divider */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              New to FYPIFY?
-            </span>
-          </div>
-        </div>
-
-        {/* Register Link */}
+        {/* Info about registration */}
         <div className="text-center">
-          <Link
-            href="/register"
-            className="text-sm text-primary hover:underline font-medium"
-          >
-            Create an account
-          </Link>
+          <p className="text-sm text-muted-foreground">
+            Need an account? Contact your administrator.
+          </p>
         </div>
       </form>
 

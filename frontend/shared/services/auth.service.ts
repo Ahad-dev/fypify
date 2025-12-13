@@ -31,34 +31,44 @@ export const authService = {
    * Login with email and password
    */
   login: async (credentials: LoginRequest): Promise<AuthResponse> => {
-    const response = await api.post<ApiResponse<AuthResponse>>(
-      AUTH_ENDPOINTS.LOGIN,
-      credentials
-    );
-    
-    const authData = response.data.data;
-    
-    // Store tokens
-    tokenStorage.setTokens(authData.accessToken, authData.refreshToken);
-    
-    return authData;
+    try{
+
+      const response = await api.post<ApiResponse<AuthResponse>>(
+        AUTH_ENDPOINTS.LOGIN,
+        credentials
+      );
+      
+      const authData = response.data.data;
+      
+      // Store tokens
+      tokenStorage.setTokens(authData.accessToken, authData.refreshToken);
+      
+      return authData;
+    }catch(error:any){
+      throw error.response.data.error;
+    }
   },
 
   /**
    * Register a new user
    */
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
-    const response = await api.post<ApiResponse<AuthResponse>>(
-      AUTH_ENDPOINTS.REGISTER,
-      data
-    );
-    
-    const authData = response.data.data;
-    
-    // Store tokens
-    tokenStorage.setTokens(authData.accessToken, authData.refreshToken);
-    
-    return authData;
+    try{
+
+      const response = await api.post<ApiResponse<AuthResponse>>(
+        AUTH_ENDPOINTS.REGISTER,
+        data
+      );
+      
+      const authData = response.data.data;
+      
+      // Store tokens
+      tokenStorage.setTokens(authData.accessToken, authData.refreshToken);
+      
+      return authData;
+    }catch(error:any){
+      throw error.response.data.error;
+    }
   },
 
   /**
@@ -135,28 +145,42 @@ export const authService = {
    */
   hasRole: (user: User | null, roles: string[]): boolean => {
     if (!user) return false;
-    return user.roles.some((role) => roles.includes(role));
+    return roles.includes(user.role);
   },
 
   /**
    * Check if user is admin
    */
   isAdmin: (user: User | null): boolean => {
-    return authService.hasRole(user, ['ADMIN']);
+    return user?.role === 'ADMIN';
   },
 
   /**
    * Check if user is supervisor
    */
   isSupervisor: (user: User | null): boolean => {
-    return authService.hasRole(user, ['SUPERVISOR', 'ADMIN']);
+    return user?.role === 'SUPERVISOR' || user?.role === 'ADMIN';
   },
 
   /**
    * Check if user is student
    */
   isStudent: (user: User | null): boolean => {
-    return authService.hasRole(user, ['STUDENT']);
+    return user?.role === 'STUDENT';
+  },
+
+  /**
+   * Check if user is FYP committee
+   */
+  isFypCommittee: (user: User | null): boolean => {
+    return user?.role === 'FYP_COMMITTEE' || user?.role === 'ADMIN';
+  },
+
+  /**
+   * Check if user is evaluation committee
+   */
+  isEvaluationCommittee: (user: User | null): boolean => {
+    return user?.role === 'EVALUATION_COMMITTEE' || user?.role === 'ADMIN';
   },
 };
 

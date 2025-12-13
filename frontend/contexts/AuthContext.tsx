@@ -7,10 +7,13 @@ import React, {
   useState,
   useCallback,
   useMemo,
+  useRef,
 } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
+import { gsap } from 'gsap';
+import Image from 'next/image';
 import { authService } from '@/shared/services';
 import { tokenStorage } from '@/shared/api/apiHandler';
 import { User, LoginRequest, RegisterRequest, AuthState } from '@/shared/types';
@@ -46,8 +49,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Fetch current user query
+  // Set mounted state after hydration to avoid SSR mismatch
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Fetch current user query - only enable after mounting to avoid hydration issues
   const {
     data: user,
     isLoading: isUserLoading,
@@ -56,10 +65,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   } = useQuery({
     queryKey: QUERY_KEYS.auth.me(),
     queryFn: authService.getCurrentUser,
-    enabled: tokenStorage.hasToken(),
+    enabled: isMounted && tokenStorage.hasToken(),
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Helper function to get role-based dashboard path
+  const getRoleDashboardPath = (role: string) => {
+    switch (role) {
+      case 'ADMIN': return '/admin/dashboard';
+      case 'SUPERVISOR': return '/supervisor/dashboard';
+      case 'STUDENT': return '/student/dashboard';
+      default: return '/dashboard';
+    }
+  };
 
   // Login mutation
   const loginMutation = useMutation({
@@ -67,9 +86,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     onSuccess: (data) => {
       queryClient.setQueryData(QUERY_KEYS.auth.me(), data.user);
       toast.success('Welcome back!');
-      router.push('/dashboard');
+      router.push(getRoleDashboardPath(data.user.role));
     },
     onError: (error: Error) => {
+      console.log(error);
       toast.error(error.message || 'Login failed. Please try again.');
     },
   });
@@ -114,6 +134,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Handle authentication state and redirects
   useEffect(() => {
+    // Don't run until mounted to avoid hydration issues
+    if (!isMounted) return;
+
     const hasToken = tokenStorage.hasToken();
     const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
     const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
@@ -141,10 +164,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // If authenticated and trying to access auth routes
     if (user && isAuthRoute) {
-      router.push('/dashboard');
+      router.push(getRoleDashboardPath(user.role));
       return;
     }
-  }, [user, userError, isUserLoading, pathname, router, queryClient, isInitialized]);
+  }, [user, userError, isUserLoading, pathname, router, queryClient, isInitialized, isMounted]);
 
   // Auth actions
   const login = useCallback(
@@ -170,16 +193,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [refetchUser]);
 
   const hasRole = useCallback(
-    (roles: string[]) => authService.hasRole(user ?? null, roles),
+    (roles: string[]) => {
+      if (!user) return false;
+      return roles.includes(user.role);
+    },
     [user]
   );
 
   // Computed values
   const isAuthenticated = !!user;
   const isLoading = isUserLoading || loginMutation.isPending || registerMutation.isPending;
-  const isAdmin = authService.isAdmin(user ?? null);
-  const isSupervisor = authService.isSupervisor(user ?? null);
-  const isStudent = authService.isStudent(user ?? null);
+  const isAdmin = user?.role === 'ADMIN';
+  const isSupervisor = user?.role === 'SUPERVISOR' || isAdmin;
+  const isStudent = user?.role === 'STUDENT';
 
   // Memoized context value
   const value = useMemo<AuthContextType>(
@@ -211,34 +237,139 @@ export function AuthProvider({ children }: AuthProviderProps) {
     ]
   );
 
-  // Show nothing until initialized to prevent flash
-  if (!isInitialized && tokenStorage.hasToken()) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary-extra-light to-secondary-light">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary text-white mb-4 shadow-xl animate-pulse">
-            <svg
-              className="w-8 h-8"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-bold text-primary mb-2">FYPIFY</h1>
-          <p className="text-neutral-500">Loading...</p>
-        </div>
-      </div>
-    );
+  // Show nothing until mounted and initialized to prevent hydration mismatch
+  if (!isMounted || (!isInitialized && tokenStorage.hasToken())) {
+    return <LoadingScreen />;
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+// Enhanced Loading Screen Component with GSAP animations
+function LoadingScreen() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const logoRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const subtitleRef = useRef<HTMLParagraphElement>(null);
+  const dotsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // Initial setup
+      gsap.set([logoRef.current, titleRef.current, subtitleRef.current], {
+        opacity: 0,
+        y: 20,
+      });
+
+      // Main timeline
+      const tl = gsap.timeline();
+
+      // Animate logo
+      tl.to(logoRef.current, {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        ease: 'power3.out',
+      })
+        // Animate title
+        .to(
+          titleRef.current,
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.5,
+            ease: 'power3.out',
+          },
+          '-=0.3'
+        )
+        // Animate subtitle
+        .to(
+          subtitleRef.current,
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.4,
+            ease: 'power3.out',
+          },
+          '-=0.2'
+        );
+
+      // Floating animation for logo
+      gsap.to(logoRef.current, {
+        y: -8,
+        duration: 1.5,
+        repeat: -1,
+        yoyo: true,
+        ease: 'power1.inOut',
+        delay: 0.6,
+      });
+
+      // Animate loading dots
+      if (dotsRef.current) {
+        const dots = dotsRef.current.children;
+        gsap.to(dots, {
+          y: -6,
+          duration: 0.4,
+          stagger: 0.15,
+          repeat: -1,
+          yoyo: true,
+          ease: 'power1.inOut',
+        });
+      }
+    }, containerRef);
+
+    return () => ctx.revert();
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="flex items-center justify-center min-h-screen bg-gradient-to-br from-neutral-50 via-primary-extra-light to-secondary-light overflow-hidden"
+    >
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-secondary/10 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative z-10 text-center">
+        {/* Logo */}
+        <div
+          ref={logoRef}
+          className="inline-flex items-center justify-center w-24 h-24 mb-6"
+        >
+          <Image
+            src="/Logo.png"
+            alt="FYPIFY Logo"
+            width={96}
+            height={96}
+            className="drop-shadow-xl"
+            priority
+          />
+        </div>
+
+        {/* Title */}
+        <h1
+          ref={titleRef}
+          className="text-4xl font-bold bg-gradient-to-r from-primary via-primary-dark to-secondary bg-clip-text text-transparent mb-3"
+        >
+          FYPIFY
+        </h1>
+
+        {/* Subtitle */}
+        <p ref={subtitleRef} className="text-neutral-500 mb-6">
+          Final Year Project Management
+        </p>
+
+        {/* Loading dots */}
+        <div ref={dotsRef} className="flex items-center justify-center gap-2">
+          <span className="w-2.5 h-2.5 bg-primary rounded-full" />
+          <span className="w-2.5 h-2.5 bg-primary/70 rounded-full" />
+          <span className="w-2.5 h-2.5 bg-primary/40 rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Custom hook to use auth context
