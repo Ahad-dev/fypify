@@ -43,4 +43,62 @@ public class SystemSetting {
     public static final String KEY_SUBMISSION_ENABLED = "submission_enabled";
     public static final String KEY_PROPOSALS_VISIBLE = "proposals_visible";
     public static final String KEY_RESULTS_RELEASED = "results_released";
+
+    // Helper methods to get typed values
+
+    /**
+     * Get the value as an Integer.
+     */
+    public Integer getValueAsInteger() {
+        if (value == null || !value.containsKey("value")) {
+            return null;
+        }
+        Object v = value.get("value");
+        if (v instanceof Number) {
+            return ((Number) v).intValue();
+        }
+        if (v instanceof String) {
+            try {
+                return Integer.parseInt((String) v);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get the value as a String.
+     */
+    public String getValueAsString() {
+        if (value == null || !value.containsKey("value")) {
+            return null;
+        }
+        Object v = value.get("value");
+        return v != null ? v.toString() : null;
+    }
+
+    /**
+     * Get the value as a Boolean.
+     */
+    public Boolean getValueAsBoolean() {
+        if (value == null || !value.containsKey("value")) {
+            return null;
+        }
+        Object v = value.get("value");
+        if (v instanceof Boolean) {
+            return (Boolean) v;
+        }
+        if (v instanceof String) {
+            return Boolean.parseBoolean((String) v);
+        }
+        return null;
+    }
+
+    /**
+     * Set a simple value (wraps in a map with "value" key).
+     */
+    public void setSimpleValue(Object simpleValue) {
+        this.value = Map.of("value", simpleValue);
+    }
 }
