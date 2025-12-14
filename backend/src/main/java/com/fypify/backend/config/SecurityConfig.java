@@ -45,27 +45,13 @@ public class SecurityConfig {
     @Value("${frontend.url}")
     private String frontendUrl;
 
-    /**
-     * Public endpoints that don't require authentication.
-     */
-    private static final String[] PUBLIC_ENDPOINTS = {
-            "/api/v1/auth/login",
-            "/api/v1/auth/register",
-            "/api/v1/auth/refresh",
-            "/api/v1/health",
-            "/actuator/**",
-            "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-ui.html"
-    };
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 // Disable CSRF (using JWT)
                 .csrf(AbstractHttpConfigurer::disable)
                 
-                // Enable CORS
+                // Enable CORS - MUST be first
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 
                 // Exception handling
@@ -78,11 +64,21 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 
-                // Authorization rules
+                // Authorization rules - ORDER MATTERS!
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        // Allow OPTIONS for CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        
+                        // Auth endpoints - public
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
+                        
+                        // Health and monitoring
+                        .requestMatchers("/api/v1/health", "/actuator/**").permitAll()
+                        
+                        // Swagger/OpenAPI
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         
                         // All other endpoints require authentication
                         .anyRequest().authenticated()
@@ -101,7 +97,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // Allow frontend URL from env and localhost for development
-        configuration.setAllowedOriginPatterns(List.of(frontendUrl, "http://localhost:3000", "https://*.vercel.app"));
+        configuration.setAllowedOriginPatterns(List.of(frontendUrl, "http://localhost:3000", "https://fypify.vercel.app"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));

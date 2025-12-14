@@ -45,7 +45,7 @@ services:
       
       # Frontend URL (update after deploying frontend)
       - key: FRONTEND_URL
-        value: https://your-frontend.vercel.app
+        value: https://fypify.vercel.app
       
       # Logging
       - key: LOGGING_LEVEL_ROOT
