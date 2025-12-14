@@ -189,7 +189,7 @@
 						<phase>integration-test</phase>
 						<configuration>
 							<!-- API endpoint to fetch OpenAPI JSON -->
-							<apiDocsUrl>http://localhost:8080/v3/api-docs</apiDocsUrl>
+							<apiDocsUrl>http://localhost:8081/v3/api-docs</apiDocsUrl>
 							<!-- Output directory for generated OpenAPI file -->
 							<outputDir>${project.basedir}/../api</outputDir>
 							<!-- Output file name -->

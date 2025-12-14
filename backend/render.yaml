@@ -24,7 +24,7 @@ services:
         value: prod
       
       - key: PORT
-        value: 8080
+        value: 8081
       
       # Database Configuration - Set in Render Dashboard for security
       - key: DATABASE_URL

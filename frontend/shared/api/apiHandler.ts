@@ -53,7 +53,7 @@ export const tokenStorage = {
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081/api/v1',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ api.interceptors.response.use(
       try {
         // Try to refresh the token
         const response = await axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1'}/auth/refresh`,
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081/api/v1'}/auth/refresh`,
           { refreshToken }
         );
         
