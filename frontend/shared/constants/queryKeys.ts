@@ -13,6 +13,31 @@ export const QUERY_KEYS = {
     session: () => [...QUERY_KEYS.auth.all, 'session'] as const,
   },
 
+  // ============ ADMIN ============
+  admin: {
+    all: ['admin'] as const,
+    // Document Types
+    documentTypes: {
+      all: () => [...QUERY_KEYS.admin.all, 'documentTypes'] as const,
+      list: () => [...QUERY_KEYS.admin.documentTypes.all(), 'list'] as const,
+      active: () => [...QUERY_KEYS.admin.documentTypes.all(), 'active'] as const,
+      detail: (id: string) => [...QUERY_KEYS.admin.documentTypes.all(), 'detail', id] as const,
+    },
+    // Audit Logs
+    auditLogs: {
+      all: () => [...QUERY_KEYS.admin.all, 'auditLogs'] as const,
+      list: (filters?: Record<string, unknown>) => [...QUERY_KEYS.admin.auditLogs.all(), 'list', filters] as const,
+      byActor: (actorId: string) => [...QUERY_KEYS.admin.auditLogs.all(), 'actor', actorId] as const,
+      byAction: (action: string) => [...QUERY_KEYS.admin.auditLogs.all(), 'action', action] as const,
+    },
+    // System Settings
+    settings: {
+      all: () => [...QUERY_KEYS.admin.all, 'settings'] as const,
+      list: () => [...QUERY_KEYS.admin.settings.all(), 'list'] as const,
+      detail: (key: string) => [...QUERY_KEYS.admin.settings.all(), 'detail', key] as const,
+    },
+  },
+
   // ============ USERS ============
   users: {
     all: ['users'] as const,
