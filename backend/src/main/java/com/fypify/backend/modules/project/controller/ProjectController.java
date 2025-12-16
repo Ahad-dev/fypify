@@ -6,6 +6,8 @@ import com.fypify.backend.modules.project.entity.ProjectStatus;
 import com.fypify.backend.modules.project.service.ProjectService;
 import com.fypify.backend.modules.user.entity.User;
 import com.fypify.backend.modules.user.service.UserService;
+import com.fypify.backend.modules.group.entity.StudentGroup;
+import com.fypify.backend.modules.group.service.GroupService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -36,6 +38,7 @@ public class ProjectController {
 
     private final ProjectService projectService;
     private final UserService userService;
+    private final GroupService groupService;
 
     // ==================== Project Queries ====================
 
@@ -109,9 +112,14 @@ public class ProjectController {
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         User student = userService.getByEmail(userDetails.getUsername());
-        // This would need to first get the student's group, then the project
+        var group = groupService.getStudentGroup(student.getId())
+                .orElseThrow(() -> new IllegalStateException("Student is not in any group"));
         // For now, return a message - this should be enhanced
-        return ResponseEntity.ok(ApiResponse.success(null, "Use /groups/my-group to get your group and project info"));
+        projectService.getProjectByGroupId(group.getId());
+        return ResponseEntity.ok(ApiResponse.success(
+                projectService.getProjectByGroupId(group.getId())
+                        .orElseThrow(() -> new IllegalStateException("No project registered for the group"))
+        ));
     }
 
     /**

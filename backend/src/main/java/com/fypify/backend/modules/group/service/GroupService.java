@@ -121,23 +121,27 @@ public class GroupService {
         if (groupRepository.existsByName(request.getName())) {
             throw new ConflictException("Group name '" + request.getName() + "' already exists");
         }
+        log.debug("Creating group with name '{}'", request.getName());
+        // Re-fetch user to ensure it's managed by the current session
+        User managedCreator = userRepository.findById(creator.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", creator.getId()));
 
         // Create the group
         StudentGroup group = StudentGroup.builder()
                 .name(request.getName())
-                .leader(creator)
+                .leader(managedCreator)
                 .members(new HashSet<>())
                 .build();
 
-        group = groupRepository.save(group);
-
-        // Add creator as first member
+        // Add creator as first member (before saving group)
         GroupMember leaderMember = GroupMember.builder()
                 .group(group)
-                .student(creator)
+                .student(managedCreator)
                 .build();
-        memberRepository.save(leaderMember);
         group.getMembers().add(leaderMember);
+
+        // Save the group (cascades to members)
+        group = groupRepository.save(group);
 
         // Send invites to initial members if provided
         if (request.getInviteMemberIds() != null && !request.getInviteMemberIds().isEmpty()) {
@@ -447,12 +451,16 @@ public class GroupService {
                 throw new BusinessRuleException("GROUP_FULL", "Group has reached maximum size of " + maxSize + " members");
             }
 
+            // Re-fetch user to ensure it's managed by the current session
+            User managedUser = userRepository.findById(user.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", user.getId()));
+
             // Accept and add to group
             invite.accept();
 
             GroupMember newMember = GroupMember.builder()
                     .group(group)
-                    .student(user)
+                    .student(managedUser)
                     .build();
             memberRepository.save(newMember);
 

@@ -61,6 +61,9 @@ export const QUERY_KEYS = {
     meetings: (projectId: string) => [...QUERY_KEYS.projects.all, projectId, 'meetings'] as const,
     submissions: (projectId: string) => [...QUERY_KEYS.projects.all, projectId, 'submissions'] as const,
     my: () => [...QUERY_KEYS.projects.all, 'my'] as const,
+    pending: () => [...QUERY_KEYS.projects.all, 'pending'] as const,
+    byGroup: (groupId: string) => [...QUERY_KEYS.projects.all, 'byGroup', groupId] as const,
+    stats: () => [...QUERY_KEYS.projects.all, 'stats'] as const,
   },
 
   // ============ GROUPS ============
@@ -74,6 +77,12 @@ export const QUERY_KEYS = {
     requests: (groupId: string) => [...QUERY_KEYS.groups.all, groupId, 'requests'] as const,
     my: () => [...QUERY_KEYS.groups.all, 'my'] as const,
     available: () => [...QUERY_KEYS.groups.all, 'available'] as const,
+    invites: {
+      all: () => [...QUERY_KEYS.groups.all, 'invites'] as const,
+      group: (groupId: string) => [...QUERY_KEYS.groups.invites.all(), 'group', groupId] as const,
+      my: () => [...QUERY_KEYS.groups.invites.all(), 'my'] as const,
+    },
+    availableStudents: (search?: string) => [...QUERY_KEYS.groups.all, 'availableStudents', search] as const,
   },
 
   // ============ PROPOSALS ============
