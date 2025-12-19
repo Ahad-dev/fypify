@@ -43,7 +43,7 @@ public class OpenApiConfig {
                                 .url("http://localhost:" + serverPort)
                                 .description("Development Server"),
                         new Server()
-                                .url("https://api.fypify.com")
+                                .url("https://fypify.onrender.com")
                                 .description("Production Server")))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
