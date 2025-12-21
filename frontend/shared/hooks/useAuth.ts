@@ -10,6 +10,17 @@ import {
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
+// Helper function to get role-based dashboard path
+const getRoleDashboardPath = (role: string) => {
+  switch (role) {
+    case 'ADMIN': return '/admin/dashboard';
+    case 'SUPERVISOR': return '/supervisor/dashboard';
+    case 'STUDENT': return '/student/dashboard';
+    case 'FYP_COMMITTEE': return '/committee/fyp/dashboard';
+    default: return '/dashboard';
+  }
+};
+
 /**
  * Hook to get current user
  */
@@ -34,7 +45,7 @@ export function useLogin() {
     onSuccess: (data) => {
       queryClient.setQueryData(QUERY_KEYS.auth.me(), data.user);
       toast.success('Welcome back!');
-      router.push('/dashboard');
+      router.push(getRoleDashboardPath(data.user.role));
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Login failed');
@@ -54,7 +65,7 @@ export function useRegister() {
     onSuccess: (data) => {
       queryClient.setQueryData(QUERY_KEYS.auth.me(), data.user);
       toast.success('Account created successfully!');
-      router.push('/dashboard');
+      router.push(getRoleDashboardPath(data.user.role));
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Registration failed');

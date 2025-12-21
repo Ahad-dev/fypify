@@ -3,3 +3,4 @@ export { adminService } from './admin.service';
 export { groupService } from './group.service';
 export { projectService } from './project.service';
 export { notificationService } from './notification.service';
+export { committeeService } from './committee.service';

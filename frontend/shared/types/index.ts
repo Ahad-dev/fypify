@@ -15,3 +15,6 @@ export * from './project.types';
 
 // Notification types
 export * from './notification.types';
+
+// Committee types
+export * from './committee.types';

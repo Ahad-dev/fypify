@@ -76,6 +76,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       case 'ADMIN': return '/admin/dashboard';
       case 'SUPERVISOR': return '/supervisor/dashboard';
       case 'STUDENT': return '/student/dashboard';
+      case 'FYP_COMMITTEE': return '/committee/fyp/dashboard';
       default: return '/dashboard';
     }
   };
@@ -100,7 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     onSuccess: (data) => {
       queryClient.setQueryData(QUERY_KEYS.auth.me(), data.user);
       toast.success('Account created successfully!');
-      router.push('/dashboard');
+      router.push(getRoleDashboardPath(data.user.role));
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Registration failed. Please try again.');

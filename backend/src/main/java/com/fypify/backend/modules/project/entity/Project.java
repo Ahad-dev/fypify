@@ -1,5 +1,6 @@
 package com.fypify.backend.modules.project.entity;
 
+import com.fypify.backend.modules.committee.entity.DeadlineBatch;
 import com.fypify.backend.modules.group.entity.StudentGroup;
 import com.fypify.backend.modules.user.entity.User;
 import jakarta.persistence.*;
@@ -85,6 +86,14 @@ public class Project {
     @Column(name = "rejection_reason", length = 1000)
     private String rejectionReason;
 
+    /**
+     * The deadline batch that applies to this project.
+     * Set when the project is approved based on the approval date.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "deadline_batch_id")
+    private DeadlineBatch deadlineBatch;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
@@ -134,6 +143,22 @@ public class Project {
         this.approvedBy = rejector;
         this.approvedAt = Instant.now();
         this.rejectionReason = reason;
+    }
+
+    /**
+     * Resubmit a rejected project for approval.
+     * Resets the project status to PENDING_APPROVAL and clears rejection data.
+     */
+    public void resubmit() {
+        if (this.status != ProjectStatus.REJECTED) {
+            throw new IllegalStateException("Only rejected projects can be resubmitted");
+        }
+        this.status = ProjectStatus.PENDING_APPROVAL;
+        this.approvedBy = null;
+        this.approvedAt = null;
+        this.rejectionReason = null;
+        this.supervisor = null;
+        this.deadlineBatch = null;
     }
 
     /**

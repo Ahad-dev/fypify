@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -47,9 +47,11 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { useMyGroup, useProjectByGroup, useRegisterProject, useUpdateProject, useDeleteProject, useProject } from '@/shared/hooks';
+import { useMyGroup, useProjectByGroup, useRegisterProject, useUpdateProject, useDeleteProject, useProject, useSupervisors, useResubmitProject } from '@/shared/hooks';
 import { ProjectStatus } from '@/shared/types';
 import Link from 'next/link';
+import { Select } from '@/components/ui/select';
+import { MultiSelect } from '@/components/multi-select';
 
 // Form schema
 const projectSchema = z.object({
@@ -62,6 +64,7 @@ const projectSchema = z.object({
     .min(100, 'Abstract must be at least 100 characters')
     .max(2000, 'Abstract must be at most 2000 characters'),
   domain: z.string().max(100, 'Domain must be at most 100 characters').optional(),
+  proposedSupervisorIds: z.array(z.string()).optional(),
 });
 
 type ProjectFormData = z.infer<typeof projectSchema>;
@@ -95,11 +98,12 @@ export default function StudentProjectPage() {
   // Queries
   const { data: group, isLoading: isLoadingGroup } = useMyGroup();
   const { data: project, isLoading: isLoadingProject, refetch: refetchProject } = useProject(group?.projectId || '');
-
+  const { data: supervisors, isLoading: isLoadingSupervisors } = useSupervisors();
   // Mutations
   const registerProject = useRegisterProject();
   const updateProject = useUpdateProject();
   const deleteProject = useDeleteProject();
+  const resubmitProject = useResubmitProject();
 
   // Form
   const form = useForm<ProjectFormData>({
@@ -108,6 +112,7 @@ export default function StudentProjectPage() {
       title: project?.title || '',
       projectAbstract: project?.projectAbstract || '',
       domain: project?.domain || '',
+      proposedSupervisorIds: project?.proposedSupervisors || [],
     },
   });
 
@@ -118,16 +123,30 @@ export default function StudentProjectPage() {
         title: project.title,
         projectAbstract: project.projectAbstract,
         domain: project.domain || '',
+        proposedSupervisorIds: project.proposedSupervisors || [],
       });
     }
   });
+
+  useEffect(()=>{
+    // if Project then set form values
+    if (project) {
+      form.reset({
+        title: project.title,
+        projectAbstract: project.projectAbstract,
+        domain: project.domain || '',
+        proposedSupervisorIds: project.proposedSupervisors || [],
+      });
+    }
+  },[project])
 
   // Computed values
   const isLeader = group?.leader?.id === user?.id;
   const hasGroup = !!group;
   const hasProject = !!project;
-  const canEdit = isLeader && project?.status === 'PENDING_APPROVAL';
+  const canEdit = isLeader && (project?.status === 'PENDING_APPROVAL' || project?.status === 'REJECTED');
   const canDelete = isLeader && project?.status === 'PENDING_APPROVAL';
+  const canResubmit = isLeader && project?.status === 'REJECTED';
 
   // Handlers
   const handleSubmit = async (data: ProjectFormData) => {
@@ -141,6 +160,7 @@ export default function StudentProjectPage() {
             title: data.title,
             projectAbstract: data.projectAbstract,
             domain: data.domain,
+            proposedSupervisors:data.proposedSupervisorIds
           },
         });
         setIsEditing(false);
@@ -150,6 +170,8 @@ export default function StudentProjectPage() {
           title: data.title,
           projectAbstract: data.projectAbstract,
           domain: data.domain,
+          proposedSupervisors:data.proposedSupervisorIds
+
         });
       }
       refetchProject();
@@ -169,6 +191,17 @@ export default function StudentProjectPage() {
     }
   };
 
+  const handleResubmit = async () => {
+    if (!project) return;
+    try {
+      await resubmitProject.mutateAsync(project.id);
+      refetchProject();
+      setIsEditing(false);
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
   const handleCancelEdit = () => {
     setIsEditing(false);
     if (project) {
@@ -176,6 +209,7 @@ export default function StudentProjectPage() {
         title: project.title,
         projectAbstract: project.projectAbstract,
         domain: project.domain || '',
+        proposedSupervisorIds: project.proposedSupervisors || [],
       });
     }
   };
@@ -323,6 +357,29 @@ export default function StudentProjectPage() {
                         )}
                       />
 
+                      <FormField
+                        control={form.control}
+                        name="proposedSupervisorIds"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Proposed Supervisors (Optional)</FormLabel>
+                            <FormControl>
+                              <MultiSelect
+                                options={supervisors?.map((sup) => ({ label: sup.fullName, value: sup.id })) || []}
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                placeholder="Choose Supervisors..."
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Select one or more supervisors you would like to propose for your
+                              project.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
                       <div className="flex justify-end gap-2">
                         <Button type="submit" disabled={registerProject.isPending}>
                           {registerProject.isPending && (
@@ -369,9 +426,36 @@ export default function StudentProjectPage() {
                 <p className="text-sm text-muted-foreground mb-2">Reason for rejection:</p>
                 <p className="text-sm">{project.rejectionReason}</p>
                 {isLeader && (
-                  <p className="text-sm text-muted-foreground mt-4">
-                    You can edit and resubmit your project after making the necessary changes.
-                  </p>
+                  <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <p className="text-sm text-muted-foreground">
+                      You can edit and resubmit your project after making the necessary changes.
+                    </p>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="default" size="sm" disabled={resubmitProject.isPending}>
+                          {resubmitProject.isPending && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Resubmit Project
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Resubmit Project?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to resubmit this project for approval? Make sure
+                            you have addressed the rejection feedback before resubmitting.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleResubmit}>
+                            Resubmit for Approval
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -404,7 +488,7 @@ export default function StudentProjectPage() {
                         <FormItem>
                           <FormLabel>Project Title</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input  {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -504,6 +588,21 @@ export default function StudentProjectPage() {
                       <p>Last updated: {new Date(project.updatedAt).toLocaleDateString()}</p>
                     )}
                   </div>
+
+                  {/* Proposed Supervisors */}
+                  {project.proposedSupervisorDetails && project.proposedSupervisorDetails.length > 0 && (
+                    // use Badge to show proposed supervisors
+                    <div>
+                      <h4 className="font-semibold mb-2">Proposed Supervisors</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {project.proposedSupervisorDetails.map((sup) => (
+                          <Badge key={sup.id} variant="outline">
+                            {sup.fullName}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Delete Action */}
                   {canDelete && (

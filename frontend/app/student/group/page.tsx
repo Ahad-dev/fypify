@@ -149,7 +149,7 @@ export default function StudentGroupPage() {
     try {
       await sendInvite.mutateAsync({
         groupId: group.id,
-        data: { inviteeId: data.email, message: data.message }, // Note: Backend expects inviteeId
+        data: { inviteeEmail: data.email, message: data.message }, // Note: Backend expects inviteeEmail
       });
       setIsInviteDialogOpen(false);
       inviteForm.reset();

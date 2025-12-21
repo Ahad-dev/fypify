@@ -4,6 +4,7 @@ import com.fypify.backend.common.exception.BusinessRuleException;
 import com.fypify.backend.common.exception.ConflictException;
 import com.fypify.backend.common.exception.ResourceNotFoundException;
 import com.fypify.backend.modules.admin.service.AuditLogService;
+import com.fypify.backend.modules.email.service.EmailService;
 import com.fypify.backend.modules.group.dto.GroupDto;
 import com.fypify.backend.modules.group.entity.StudentGroup;
 import com.fypify.backend.modules.group.repository.StudentGroupRepository;
@@ -41,6 +42,7 @@ public class ProjectService {
     private final UserRepository userRepository;
     private final GroupService groupService;
     private final NotificationService notificationService;
+    private final EmailService emailService;
     private final AuditLogService auditLogService;
 
     // ==================== Project CRUD Operations ====================
@@ -169,6 +171,18 @@ public class ProjectService {
                 group.getId()
         );
 
+        // Send email notification to FYP Committee members (async, non-blocking)
+        List<String> fypCommitteeEmails = fypCommitteeMembers.stream()
+                .map(User::getEmail)
+                .filter(email -> email != null && !email.isBlank())
+                .collect(Collectors.toList());
+        emailService.sendProjectRegisteredEmail(
+                fypCommitteeEmails,
+                project.getTitle(),
+                group.getName(),
+                registrar.getFullName()
+        );
+
         // Log the action
         auditLogService.logCreate(registrar, "Project", project.getId(),
                 Map.of(
@@ -183,7 +197,7 @@ public class ProjectService {
     }
 
     /**
-     * Update a project (only allowed while pending).
+     * Update a project (only allowed while pending or rejected).
      */
     @Transactional
     public ProjectDto updateProject(UUID projectId, UpdateProjectRequest request, User actor) {
@@ -195,9 +209,9 @@ public class ProjectService {
             throw new BusinessRuleException("PERMISSION_DENIED", "Only the group leader can update the project");
         }
 
-        // Only allow updates while pending
-        if (!project.isPendingApproval() && !actor.isAdmin()) {
-            throw new BusinessRuleException("PROJECT_NOT_PENDING", "Project cannot be updated after approval decision");
+        // Only allow updates while pending or rejected (for resubmission)
+        if (!project.isPendingApproval() && !project.isRejected() && !actor.isAdmin()) {
+            throw new BusinessRuleException("PROJECT_NOT_EDITABLE", "Project can only be updated while pending approval or rejected");
         }
 
         // Capture old values
@@ -289,6 +303,13 @@ public class ProjectService {
                 );
             }
 
+            // Send email notification to group members (async, non-blocking)
+            List<String> studentEmails = group.getMembers().stream()
+                    .map(m -> m.getStudent().getEmail())
+                    .filter(email -> email != null && !email.isBlank())
+                    .collect(Collectors.toList());
+            emailService.sendProjectApprovedEmail(studentEmails, project.getTitle(), supervisor.getFullName());
+
             auditLogService.logUpdate(decisionMaker, "Project", project.getId(),
                     Map.of("status", oldStatus.name()),
                     Map.of("status", project.getStatus().name(), "supervisorId", supervisor.getId().toString()));
@@ -312,6 +333,13 @@ public class ProjectService {
                         request.getRejectionReason()
                 );
             }
+
+            // Send email notification to group members (async, non-blocking)
+            List<String> studentEmails = group.getMembers().stream()
+                    .map(m -> m.getStudent().getEmail())
+                    .filter(email -> email != null && !email.isBlank())
+                    .collect(Collectors.toList());
+            emailService.sendProjectRejectedEmail(studentEmails, project.getTitle(), request.getRejectionReason());
 
             auditLogService.logUpdate(decisionMaker, "Project", project.getId(),
                     Map.of("status", oldStatus.name()),
@@ -344,6 +372,61 @@ public class ProjectService {
                 Map.of("title", project.getTitle()));
 
         log.info("Project '{}' deleted by {}", project.getTitle(), actor.getId());
+    }
+
+    /**
+     * Resubmit a rejected project for approval.
+     * Only the group leader can resubmit a rejected project.
+     */
+    @Transactional
+    public ProjectDto resubmitProject(UUID projectId, User actor) {
+        Project project = findProjectById(projectId);
+
+        // Verify actor is the group leader
+        StudentGroup group = project.getGroup();
+        if (!group.isLeader(actor.getId())) {
+            throw new BusinessRuleException("NOT_GROUP_LEADER", "Only the group leader can resubmit the project");
+        }
+
+        // Verify project is rejected
+        if (!project.isRejected()) {
+            throw new BusinessRuleException("PROJECT_NOT_REJECTED", "Only rejected projects can be resubmitted");
+        }
+
+        // Resubmit the project
+        String previousRejectionReason = project.getRejectionReason();
+        project.resubmit();
+        project = projectRepository.save(project);
+
+        // Send notifications to FYP Committee members
+        List<User> fypCommitteeMembers = userRepository.findByRoleName(Role.FYP_COMMITTEE);
+        notificationService.sendProjectRegisteredNotification(
+                fypCommitteeMembers,
+                project.getId(),
+                project.getTitle() + " (Resubmitted)",
+                group.getId()
+        );
+
+        // Send email notification to FYP Committee members (async, non-blocking)
+        List<String> fypCommitteeEmails = fypCommitteeMembers.stream()
+                .map(User::getEmail)
+                .filter(email -> email != null && !email.isBlank())
+                .collect(Collectors.toList());
+        emailService.sendProjectRegisteredEmail(
+                fypCommitteeEmails,
+                project.getTitle() + " (Resubmitted)",
+                group.getName(),
+                actor.getFullName()
+        );
+
+        // Log the action
+        auditLogService.logUpdate(actor, "Project", project.getId(),
+                Map.of("status", ProjectStatus.REJECTED.name(), "rejectionReason", previousRejectionReason != null ? previousRejectionReason : ""),
+                Map.of("status", ProjectStatus.PENDING_APPROVAL.name()));
+
+        log.info("Project '{}' resubmitted by user {} for group {}", project.getTitle(), actor.getId(), group.getId());
+
+        return toDto(project);
     }
 
     // ==================== Statistics ====================

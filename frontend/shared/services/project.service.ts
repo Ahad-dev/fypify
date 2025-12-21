@@ -6,6 +6,7 @@ import {
   UpdateProjectRequest,
   ProjectDecisionRequest,
   ProjectStatus,
+  ProposedSupervisor,
 } from '@/shared/types';
 import { PaginatedResponse, PaginationParams } from '@/shared/types/api.types';
 
@@ -134,6 +135,16 @@ export const projectService = {
     await api.delete(`${PROJECT_ENDPOINTS.PROJECTS}/${id}`);
   },
 
+  /**
+   * Resubmit a rejected project for approval
+   */
+  resubmitProject: async (id: string): Promise<Project> => {
+    const response = await api.post<ApiResponse<Project>>(
+      `${PROJECT_ENDPOINTS.PROJECTS}/${id}/resubmit`
+    );
+    return response.data.data;
+  },
+
   // ============ Statistics ============
 
   /**
@@ -145,6 +156,19 @@ export const projectService = {
     );
     return response.data.data;
   },
+
+
+  /**
+   * Get all the supervisors who can be proposed for a project
+   */
+  getAllSupervisors: async (): Promise<ProposedSupervisor[]> => {
+    const response = await api.get<ApiResponse<ProposedSupervisor[]>>(
+      '/users/supervisors',
+      { params: { limit: 1000 } } // assuming a large limit to get all supervisors
+    );
+    return response.data.data;  
+  },
+
 };
 
 export default projectService;
