@@ -6,6 +6,7 @@ import com.fypify.backend.common.exception.ResourceNotFoundException;
 import com.fypify.backend.modules.admin.entity.SystemSetting;
 import com.fypify.backend.modules.admin.repository.SystemSettingRepository;
 import com.fypify.backend.modules.admin.service.AuditLogService;
+import com.fypify.backend.modules.email.service.EmailService;
 import com.fypify.backend.modules.group.dto.*;
 import com.fypify.backend.modules.group.entity.GroupInvite;
 import com.fypify.backend.modules.group.entity.GroupInvite.InviteStatus;
@@ -48,6 +49,7 @@ public class GroupService {
     private final UserRepository userRepository;
     private final SystemSettingRepository settingRepository;
     private final NotificationService notificationService;
+    private final EmailService emailService;
     private final AuditLogService auditLogService;
 
     // Default group size limits
@@ -143,18 +145,18 @@ public class GroupService {
         // Save the group (cascades to members)
         group = groupRepository.save(group);
 
-        // Send invites to initial members if provided
-        if (request.getInviteMemberIds() != null && !request.getInviteMemberIds().isEmpty()) {
-            for (UUID inviteeId : request.getInviteMemberIds()) {
-                if (!inviteeId.equals(creator.getId())) {
-                    try {
-                        sendInviteInternal(group, creator, inviteeId, null);
-                    } catch (Exception e) {
-                        log.warn("Failed to send invite to {}: {}", inviteeId, e.getMessage());
-                    }
-                }
-            }
-        }
+        // // Send invites to initial members if provided
+        // if (request.getInviteMemberIds() != null && !request.getInviteMemberIds().isEmpty()) {
+        //     for (UUID inviteeId : request.getInviteMemberIds()) {
+        //         if (!inviteeId.equals(creator.getId())) {
+        //             try {
+        //                 sendInviteInternal(group, creator, inviteeId, null);
+        //             } catch (Exception e) {
+        //                 log.warn("Failed to send invite to {}: {}", inviteeId, e.getMessage());
+        //             }
+        //         }
+        //     }
+        // }
 
         // Log the action
         auditLogService.logCreate(creator, "StudentGroup", group.getId(),
@@ -337,15 +339,15 @@ public class GroupService {
             throw new BusinessRuleException("PERMISSION_DENIED", "Only group members can send invitations");
         }
 
-        return toInviteDto(sendInviteInternal(group, inviter, request.getInviteeId(), request.getMessage()));
+        return toInviteDto(sendInviteInternal(group, inviter, request.getInviteeEmail(), request.getMessage()));
     }
 
     /**
      * Internal method to send an invite.
      */
-    private GroupInvite sendInviteInternal(StudentGroup group, User inviter, UUID inviteeId, String message) {
-        User invitee = userRepository.findById(inviteeId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", inviteeId));
+    private GroupInvite sendInviteInternal(StudentGroup group, User inviter, String inviteeEmail, String message) {
+        User invitee = userRepository.findByEmail(inviteeEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", inviteeEmail));
 
         // Validate invitee is a student
         if (!invitee.isStudent()) {
@@ -353,17 +355,17 @@ public class GroupService {
         }
 
         // Check if already a member
-        if (group.hasMember(inviteeId)) {
+        if (group.hasMember(invitee.getId())) {
             throw new ConflictException("User is already a member of this group");
         }
 
         // Check if invitee is in another group
-        if (memberRepository.existsByStudentId(inviteeId)) {
+        if (memberRepository.existsByStudentId(invitee.getId())) {
             throw new ConflictException("User is already a member of another group");
         }
 
         // Check if there's already a pending invite
-        if (inviteRepository.existsByGroupIdAndInviteeIdAndStatus(group.getId(), inviteeId, InviteStatus.PENDING)) {
+        if (inviteRepository.existsByGroupIdAndInviteeIdAndStatus(group.getId(), invitee.getId(), InviteStatus.PENDING)) {
             throw new ConflictException("An invitation is already pending for this user");
         }
 
@@ -385,10 +387,15 @@ public class GroupService {
 
         invite = inviteRepository.save(invite);
 
-        // Send notification
+        // Send in-app notification
         notificationService.sendGroupInviteNotification(invitee, group.getId(), group.getName(), inviter);
 
-        log.info("Invite sent from {} to {} for group {}", inviter.getId(), inviteeId, group.getId());
+        // Send email notification (async, non-blocking)
+        if (invitee.getEmail() != null && !invitee.getEmail().isBlank()) {
+            emailService.sendGroupInviteEmail(invitee.getEmail(), group.getName(), inviter.getFullName());
+        }
+
+        log.info("Invite sent from {} to {} for group {}", inviter.getId(), invitee.getId(), group.getId());
 
         return invite;
     }
@@ -463,6 +470,13 @@ public class GroupService {
                     .student(managedUser)
                     .build();
             memberRepository.save(newMember);
+
+            // Send email notification to existing group members (async, non-blocking)
+            List<String> memberEmails = group.getMembers().stream()
+                    .map(m -> m.getStudent().getEmail())
+                    .filter(email -> email != null && !email.isBlank())
+                    .collect(Collectors.toList());
+            emailService.sendMemberJoinedEmail(memberEmails, managedUser.getFullName(), group.getName());
 
             log.info("User {} accepted invite and joined group {}", user.getId(), group.getId());
         } else {

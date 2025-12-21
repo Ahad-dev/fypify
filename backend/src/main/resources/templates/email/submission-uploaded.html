@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Submission Received</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5; }
+        .container { background-color: #ffffff; margin: 20px auto; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        .header { background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%); color: white; padding: 30px 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
+        .header p { margin: 10px 0 0; opacity: 0.9; font-size: 14px; }
+        .content { padding: 30px; }
+        .content h2 { color: #17a2b8; margin-top: 0; font-size: 22px; }
+        .content p { margin: 15px 0; color: #555; }
+        .highlight-box { background-color: #e8f8f5; border-left: 4px solid #17a2b8; padding: 15px 20px; margin: 20px 0; border-radius: 0 4px 4px 0; }
+        .button { display: inline-block; background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%); color: white !important; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: 500; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #eee; }
+        .footer a { color: #17a2b8; text-decoration: none; }
+        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: 500; background-color: #cce5ff; color: #004085; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>FYPIFY</h1>
+            <p>Final Year Project Management System</p>
+        </div>
+        <div class="content">
+            <h2>📄 New Submission Received</h2>
+            
+            <p>A student has uploaded a new submission that requires your review.</p>
+            
+            <div class="highlight-box">
+                <p style="margin: 5px 0;"><strong>Submitted By:</strong> <span th:text="${studentName}">Student Name</span></p>
+                <p style="margin: 5px 0;"><strong>Project:</strong> <span th:text="${projectTitle}">Project Title</span></p>
+                <p style="margin: 5px 0;"><strong>Submission Type:</strong> <span th:text="${submissionType}">Submission Type</span></p>
+                <p style="margin: 5px 0;"><strong>Status:</strong> <span class="status-badge">Pending Review</span></p>
+            </div>
+            
+            <p>Please log in to review the submission and provide feedback to the student.</p>
+            
+            <p style="text-align: center;">
+                <a th:href="${frontendUrl + '/supervisor/projects'}" class="button">Review Submission</a>
+            </p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message from FYPIFY. Please do not reply directly to this email.</p>
+            <p><a th:href="${frontendUrl}">Visit FYPIFY</a> | <a th:href="${frontendUrl + '/dashboard'}">Go to Dashboard</a></p>
+            <p>© <span th:text="${year}">2024</span> FYPIFY. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

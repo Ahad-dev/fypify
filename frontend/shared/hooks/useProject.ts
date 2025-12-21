@@ -169,3 +169,34 @@ export function useDeleteProject() {
     },
   });
 }
+
+/**
+ * Hook to resubmit a rejected project
+ */
+export function useResubmitProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => projectService.resubmitProject(id),
+    onSuccess: (project) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.detail(project.id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notifications.all });
+      toast.success(`Project "${project.title}" has been resubmitted for approval`);
+    },
+    onError: (error: any) => {
+      const message = error?.message || error?.response?.data?.message || 'Failed to resubmit project';
+      toast.error(message);
+    },
+  });
+}
+
+
+export function useSupervisors() {
+  return useQuery({
+    queryKey: QUERY_KEYS.projects.supervisors(),
+    queryFn: () => projectService.getAllSupervisors(),
+    staleTime: 10 * 60 * 1000,
+  });
+}

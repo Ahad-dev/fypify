@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Result Released</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5; }
+        .container { background-color: #ffffff; margin: 20px auto; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
+        .header p { margin: 10px 0 0; opacity: 0.9; font-size: 14px; }
+        .content { padding: 30px; }
+        .content h2 { color: #28a745; margin-top: 0; font-size: 22px; }
+        .content p { margin: 15px 0; color: #555; }
+        .highlight-box { background-color: #f0fff4; border-left: 4px solid #28a745; padding: 15px 20px; margin: 20px 0; border-radius: 0 4px 4px 0; }
+        .result-box { background: linear-gradient(135deg, #f8f9ff 0%, #e8f5e9 100%); border: 2px solid #28a745; padding: 30px; margin: 20px 0; border-radius: 12px; text-align: center; }
+        .result-label { font-size: 14px; color: #666; margin-bottom: 5px; }
+        .result-value { font-size: 32px; font-weight: bold; color: #28a745; }
+        .button { display: inline-block; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white !important; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: 500; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #eee; }
+        .footer a { color: #28a745; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 FYPIFY</h1>
+            <p>Final Year Project Management System</p>
+        </div>
+        <div class="content">
+            <h2>🏆 Final Result Released</h2>
+            
+            <p>The final result for your project has been released.</p>
+            
+            <div class="highlight-box">
+                <p style="margin: 5px 0;"><strong>Project:</strong> <span th:text="${projectTitle}">Project Title</span></p>
+            </div>
+            
+            <div class="result-box">
+                <p class="result-label">Your Final Result</p>
+                <p class="result-value" th:text="${result}">PASSED</p>
+            </div>
+            
+            <p>Congratulations on completing your Final Year Project! Log in to FYPIFY to view detailed feedback and scores.</p>
+            
+            <p style="text-align: center;">
+                <a th:href="${frontendUrl + '/student/project'}" class="button">View Full Results</a>
+            </p>
+            
+            <p style="color: #888; font-size: 14px;">
+                <em>Thank you for using FYPIFY throughout your FYP journey. Best wishes for your future endeavors!</em>
+            </p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message from FYPIFY. Please do not reply directly to this email.</p>
+            <p><a th:href="${frontendUrl}">Visit FYPIFY</a> | <a th:href="${frontendUrl + '/dashboard'}">Go to Dashboard</a></p>
+            <p>© <span th:text="${year}">2024</span> FYPIFY. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

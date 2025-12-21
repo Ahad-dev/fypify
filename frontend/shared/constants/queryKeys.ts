@@ -64,6 +64,7 @@ export const QUERY_KEYS = {
     pending: () => [...QUERY_KEYS.projects.all, 'pending'] as const,
     byGroup: (groupId: string) => [...QUERY_KEYS.projects.all, 'byGroup', groupId] as const,
     stats: () => [...QUERY_KEYS.projects.all, 'stats'] as const,
+    supervisors: () => [...QUERY_KEYS.projects.all, 'supervisors'] as const,
   },
 
   // ============ GROUPS ============
@@ -171,6 +172,23 @@ export const QUERY_KEYS = {
     dashboard: () => [...QUERY_KEYS.statistics.all, 'dashboard'] as const,
     overview: () => [...QUERY_KEYS.statistics.all, 'overview'] as const,
     projects: () => [...QUERY_KEYS.statistics.all, 'projects'] as const,
+  },
+
+  // ============ COMMITTEE ============
+  committee: {
+    all: ['committee'] as const,
+    // Pending Projects
+    pendingProjects: () => [...QUERY_KEYS.committee.all, 'pendingProjects'] as const,
+    // Deadline Batches
+    deadlineBatches: {
+      all: () => [...QUERY_KEYS.committee.all, 'deadlineBatches'] as const,
+      list: () => [...QUERY_KEYS.committee.deadlineBatches.all(), 'list'] as const,
+      detail: (id: string) => [...QUERY_KEYS.committee.deadlineBatches.all(), 'detail', id] as const,
+      current: () => [...QUERY_KEYS.committee.deadlineBatches.all(), 'current'] as const,
+      active: () => [...QUERY_KEYS.committee.deadlineBatches.all(), 'active'] as const,
+    },
+    // Supervisors
+    supervisors: () => [...QUERY_KEYS.committee.all, 'supervisors'] as const,
   },
 } as const;
 

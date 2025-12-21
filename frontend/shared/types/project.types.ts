@@ -66,3 +66,13 @@ export interface ProjectDecisionRequest {
 export interface ProjectStats {
   [status: string]: number;
 }
+
+// ============ Proposed Supervisors  ============
+export interface ProposedSupervisor {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  createdAt: Date;
+}

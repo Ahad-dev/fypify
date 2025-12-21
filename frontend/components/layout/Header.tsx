@@ -35,7 +35,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 // Navigation items based on user role
-const getNavigationItems = (isAdmin: boolean, isSupervisor: boolean, isStudent: boolean) => {
+const getNavigationItems = (isAdmin: boolean, isSupervisor: boolean, isStudent: boolean, isFypCommittee: boolean) => {
   const items: { name: string; href: string; icon: typeof LayoutDashboard; roles: string[] }[] = [];
 
   // Add role-specific dashboard
@@ -45,6 +45,13 @@ const getNavigationItems = (isAdmin: boolean, isSupervisor: boolean, isStudent: 
       href: '/admin/dashboard',
       icon: LayoutDashboard,
       roles: ['ADMIN'],
+    });
+  } else if (isFypCommittee) {
+    items.push({
+      name: 'Dashboard',
+      href: '/committee/fyp/dashboard',
+      icon: LayoutDashboard,
+      roles: ['FYP_COMMITTEE'],
     });
   } else if (isSupervisor) {
     items.push({
@@ -127,7 +134,8 @@ export function Header() {
   const navRef = useRef<HTMLElement>(null);
   const bellRef = useRef<HTMLButtonElement>(null);
 
-  const navigationItems = getNavigationItems(isAdmin, isSupervisor, isStudent);
+  const isFypCommittee = user?.role === 'FYP_COMMITTEE';
+  const navigationItems = getNavigationItems(isAdmin, isSupervisor, isStudent, isFypCommittee);
 
   // GSAP animations on mount
   useEffect(() => {

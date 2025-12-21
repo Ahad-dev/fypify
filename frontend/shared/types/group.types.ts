@@ -60,7 +60,7 @@ export interface UpdateGroupRequest {
 }
 
 export interface SendInviteRequest {
-  inviteeId: string;
+  inviteeEmail: string;
   message?: string;
 }
 

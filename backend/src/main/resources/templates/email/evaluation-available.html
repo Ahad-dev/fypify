@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluation Available</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5; }
+        .container { background-color: #ffffff; margin: 20px auto; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        .header { background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white; padding: 30px 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
+        .header p { margin: 10px 0 0; opacity: 0.9; font-size: 14px; }
+        .content { padding: 30px; }
+        .content h2 { color: #6f42c1; margin-top: 0; font-size: 22px; }
+        .content p { margin: 15px 0; color: #555; }
+        .highlight-box { background-color: #f8f5ff; border-left: 4px solid #6f42c1; padding: 15px 20px; margin: 20px 0; border-radius: 0 4px 4px 0; }
+        .button { display: inline-block; background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white !important; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: 500; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #eee; }
+        .footer a { color: #6f42c1; text-decoration: none; }
+        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: 500; background-color: #e2d9f3; color: #6f42c1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>FYPIFY</h1>
+            <p>Final Year Project Management System</p>
+        </div>
+        <div class="content">
+            <h2>📊 Evaluation Available</h2>
+            
+            <p>Great news! An evaluation for your project is now available for viewing.</p>
+            
+            <div class="highlight-box">
+                <p style="margin: 5px 0;"><strong>Project:</strong> <span th:text="${projectTitle}">Project Title</span></p>
+                <p style="margin: 5px 0;"><strong>Evaluation Type:</strong> <span th:text="${evaluationType}">Evaluation Type</span></p>
+                <p style="margin: 5px 0;"><strong>Status:</strong> <span class="status-badge">Available</span></p>
+            </div>
+            
+            <p>Log in to FYPIFY to view your evaluation results and feedback from the evaluation committee.</p>
+            
+            <p style="text-align: center;">
+                <a th:href="${frontendUrl + '/student/project'}" class="button">View Evaluation</a>
+            </p>
+            
+            <p style="color: #888; font-size: 14px;">
+                <em>If you have any questions about your evaluation, please contact your supervisor.</em>
+            </p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message from FYPIFY. Please do not reply directly to this email.</p>
+            <p><a th:href="${frontendUrl}">Visit FYPIFY</a> | <a th:href="${frontendUrl + '/dashboard'}">Go to Dashboard</a></p>
+            <p>© <span th:text="${year}">2024</span> FYPIFY. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Requires Changes</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5; }
+        .container { background-color: #ffffff; margin: 20px auto; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        .header { background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%); color: white; padding: 30px 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
+        .header p { margin: 10px 0 0; opacity: 0.9; font-size: 14px; }
+        .content { padding: 30px; }
+        .content h2 { color: #dc3545; margin-top: 0; font-size: 22px; }
+        .content p { margin: 15px 0; color: #555; }
+        .highlight-box { background-color: #fff5f5; border-left: 4px solid #dc3545; padding: 15px 20px; margin: 20px 0; border-radius: 0 4px 4px 0; }
+        .feedback-box { background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white !important; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: 500; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #eee; }
+        .footer a { color: #667eea; text-decoration: none; }
+        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: 500; background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>FYPIFY</h1>
+            <p>Final Year Project Management System</p>
+        </div>
+        <div class="content">
+            <h2>⚠️ Project Requires Changes</h2>
+            
+            <p>Your project submission has been reviewed and requires some modifications before approval.</p>
+            
+            <div class="highlight-box">
+                <p style="margin: 5px 0;"><strong>Project Title:</strong> <span th:text="${projectTitle}">Project Title</span></p>
+                <p style="margin: 5px 0;"><strong>Status:</strong> <span class="status-badge">Changes Required</span></p>
+            </div>
+            
+            <h3 style="color: #333;">Committee Feedback:</h3>
+            <div class="feedback-box">
+                <p style="margin: 0; white-space: pre-wrap;" th:text="${rejectionReason}">Rejection reason will appear here.</p>
+            </div>
+            
+            <p>Please review the feedback above and make the necessary changes to your project proposal. Once updated, you can resubmit your project for review.</p>
+            
+            <h3 style="color: #333;">Recommended Actions:</h3>
+            <ul style="color: #555;">
+                <li>Carefully review the committee's feedback</li>
+                <li>Discuss with your group members to address the concerns</li>
+                <li>Update your project details accordingly</li>
+                <li>Resubmit for approval</li>
+            </ul>
+            
+            <p style="text-align: center;">
+                <a th:href="${frontendUrl + '/student/project'}" class="button">Update Project</a>
+            </p>
+            
+            <p style="color: #888; font-size: 14px;">
+                <em>Don't be discouraged! Many successful projects require revisions. Use this feedback to strengthen your proposal.</em>
+            </p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message from FYPIFY. Please do not reply directly to this email.</p>
+            <p><a th:href="${frontendUrl}">Visit FYPIFY</a> | <a th:href="${frontendUrl + '/dashboard'}">Go to Dashboard</a></p>
+            <p>© <span th:text="${year}">2024</span> FYPIFY. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

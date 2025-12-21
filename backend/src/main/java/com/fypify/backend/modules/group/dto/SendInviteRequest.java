@@ -15,8 +15,8 @@ import java.util.UUID;
 @Builder
 public class SendInviteRequest {
     
-    @NotNull(message = "Invitee ID is required")
-    private UUID inviteeId;
+    @NotNull(message = "Invitee Email is required")
+    private String inviteeEmail;
     
     @Size(max = 500, message = "Message must be at most 500 characters")
     private String message;

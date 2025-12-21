@@ -213,6 +213,22 @@ public class ProjectController {
         return ResponseEntity.ok(ApiResponse.success(null, "Project deleted successfully"));
     }
 
+    /**
+     * Resubmit a rejected project.
+     * POST /api/v1/projects/{id}/resubmit
+     */
+    @PostMapping("/{id}/resubmit")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Resubmit project", description = "Resubmit a rejected project for approval (group leader only)")
+    public ResponseEntity<ApiResponse<ProjectDto>> resubmitProject(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        User actor = userService.getByEmail(userDetails.getUsername());
+        ProjectDto project = projectService.resubmitProject(id, actor);
+        return ResponseEntity.ok(ApiResponse.success(project, "Project resubmitted successfully"));
+    }
+
     // ==================== Project Approval ====================
 
     /**

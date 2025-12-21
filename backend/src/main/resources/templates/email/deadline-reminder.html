@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deadline Reminder</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5; }
+        .container { background-color: #ffffff; margin: 20px auto; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        .header { background: linear-gradient(135deg, #fd7e14 0%, #dc3545 100%); color: white; padding: 30px 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
+        .header p { margin: 10px 0 0; opacity: 0.9; font-size: 14px; }
+        .content { padding: 30px; }
+        .content h2 { color: #fd7e14; margin-top: 0; font-size: 22px; }
+        .content p { margin: 15px 0; color: #555; }
+        .urgent-box { background-color: #fff5f5; border: 2px solid #dc3545; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center; }
+        .countdown { font-size: 36px; font-weight: bold; color: #dc3545; }
+        .button { display: inline-block; background: linear-gradient(135deg, #fd7e14 0%, #dc3545 100%); color: white !important; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: 500; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #eee; }
+        .footer a { color: #fd7e14; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⏰ FYPIFY</h1>
+            <p>Final Year Project Management System</p>
+        </div>
+        <div class="content">
+            <h2>🔔 Deadline Reminder</h2>
+            
+            <p>This is a reminder that an important deadline is approaching:</p>
+            
+            <div class="urgent-box">
+                <p style="margin: 0 0 10px; font-size: 18px; font-weight: 600;" th:text="${deadlineTitle}">Deadline Title</p>
+                <p class="countdown"><span th:text="${hoursRemaining}">24</span> hours remaining</p>
+                <p style="margin: 10px 0 0; color: #666;">Due: <span th:text="${dueDate}">December 31, 2024</span></p>
+            </div>
+            
+            <p><strong>Don't wait until the last minute!</strong> Make sure to complete and submit your work before the deadline.</p>
+            
+            <p style="text-align: center;">
+                <a th:href="${frontendUrl + '/student/project'}" class="button">Submit Now</a>
+            </p>
+            
+            <p style="color: #888; font-size: 14px;">
+                <em>Late submissions may not be accepted or may result in penalties. Please contact your supervisor if you need an extension.</em>
+            </p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message from FYPIFY. Please do not reply directly to this email.</p>
+            <p><a th:href="${frontendUrl}">Visit FYPIFY</a> | <a th:href="${frontendUrl + '/dashboard'}">Go to Dashboard</a></p>
+            <p>© <span th:text="${year}">2024</span> FYPIFY. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
