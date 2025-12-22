@@ -31,6 +31,52 @@ import java.util.List;
 /**
  * Security configuration for the application.
  * Configures JWT authentication, CORS, and authorization rules.
+ * 
+ * ===========================================================================================
+ *                              GANG OF FOUR (GoF) DESIGN PATTERNS USED
+ * ===========================================================================================
+ * 
+ * 1. CHAIN OF RESPONSIBILITY PATTERN (Behavioral) - Spring Security Filter Chain
+ *    - The SecurityFilterChain is a classic implementation of Chain of Responsibility.
+ *    - Each filter in the chain (JwtAuthenticationFilter, etc.) processes the request
+ *      and decides whether to handle it or pass to the next filter.
+ *    - Filters: CORS → CSRF → Authentication → Authorization → JwtFilter → Controller
+ *    - If any filter rejects the request, the chain is broken and error returned.
+ * 
+ * 2. BUILDER PATTERN (Creational) - HttpSecurity Configuration
+ *    - HttpSecurity uses a fluent Builder pattern for configuration.
+ *    - Methods like .cors(), .csrf(), .authorizeHttpRequests() return the builder
+ *      allowing method chaining for readable configuration.
+ *    - Final .build() call creates the immutable SecurityFilterChain.
+ * 
+ * 3. SINGLETON PATTERN (Creational) - Spring @Bean and @Configuration
+ *    - @Configuration classes are singleton by default.
+ *    - @Bean methods return singleton instances cached by Spring.
+ *    - SecurityFilterChain, PasswordEncoder, AuthenticationManager are singletons.
+ * 
+ * 4. STRATEGY PATTERN (Behavioral) - AuthenticationProvider
+ *    - AuthenticationProvider interface defines a strategy for authentication.
+ *    - DaoAuthenticationProvider is a concrete strategy for database auth.
+ *    - Could easily swap to OAuth2, LDAP, or custom provider strategies.
+ * 
+ * 5. FACTORY METHOD PATTERN (Creational) - @Bean Methods
+ *    - Each @Bean method acts as a Factory Method.
+ *    - Spring calls these methods to create instances.
+ *    - Encapsulates object creation logic (e.g., BCryptPasswordEncoder configuration).
+ * 
+ * ===========================================================================================
+ *                              PATTERNS THAT COULD BE APPLIED HERE
+ * ===========================================================================================
+ * 
+ * 1. DECORATOR PATTERN (Structural) - Suggested for Enhanced Filters
+ *    - Create decorators around filters for logging, metrics, etc.
+ *    - Example: LoggingFilter wrapping JwtAuthenticationFilter
+ * 
+ * 2. ABSTRACT FACTORY PATTERN (Creational) - Suggested for Multi-Environment Config
+ *    - Create SecurityConfigFactory for different environments (dev, prod, test).
+ *    - Each factory produces different SecurityFilterChain configurations.
+ * 
+ * ===========================================================================================
  */
 @Configuration
 @EnableWebSecurity

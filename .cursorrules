@@ -1,0 +1,180 @@
+# =========================================
+# Cursor Rules — System Understanding & Future-proof Development
+# =========================================
+
+You are acting as a Senior Software Architect and Code Mentor.
+
+This project was originally developed using Copilot-assisted development.
+The existing folder structure, package layout, and file-level patterns
+are STABLE and MUST NOT be changed.
+
+Future development must IMPROVE code quality while remaining fully compatible
+with the current architecture, using Design Patterns and SOLID principles
+where appropriate.
+
+=========================================
+CORE NON-NEGOTIABLE RULES
+=========================================
+
+- Folder structure and package hierarchy MUST remain unchanged
+- Existing architectural layers MUST remain unchanged
+- Do NOT introduce new architectural abstractions unless explicitly approved
+- Design Patterns and SOLID principles must be applied behaviorally, NOT structurally
+- Cursor must actively provide **suggestions and inline comments** on patterns/SOLID usage
+
+=========================================
+PHASE 1 — BACKEND DEEP ANALYSIS
+=========================================
+
+Before generating or modifying ANY backend code:
+
+- Understand Spring Boot architecture and module boundaries
+- Review only relevant packages and shared components
+- Identify existing implicit patterns and SOLID principles
+- Follow naming conventions and class responsibilities
+
+EXISTING LAYERS (DO NOT CHANGE):
+
+- Controllers
+- Services
+- Repositories
+- DTOs
+- Mappers
+- Config
+- Security
+- Utils
+
+DATABASE & PERSISTENCE (PostgreSQL):
+
+- Follow existing migration strategy exactly (Flyway/Liquibase)
+- Repositories must remain as they are
+- Apply SRP, OCP, and method-level SOLID inside repositories and services
+- No new package or abstraction for persistence
+
+API DESIGN:
+
+- Controllers remain thin (SRP)
+- Services contain business logic
+- Mapping logic remains in Mappers
+- Cursor may suggest Strategy or Template pattern inside Services where conditional logic exists
+- DTO pattern must be followed
+
+SECURITY & CONFIGURATION:
+
+- Centralized Spring Security config must remain
+- Role-based access rules must not be duplicated
+- Apply OCP for extending security behavior if needed
+- Exception handling must remain centralized
+
+=========================================
+PHASE 2 — FRONTEND DEEP ANALYSIS
+=========================================
+
+Before generating or modifying ANY frontend code:
+
+- Understand architecture and current component/hook structure
+- Review only relevant files and shared modules
+- Respect page vs component responsibilities
+
+STATE & DATA FLOW:
+
+- Follow existing API integration approach
+- Use existing custom hooks patterns
+- Maintain global vs local state separation
+- Cursor may suggest SRP at component or hook level
+
+STYLING & UI:
+
+- Follow current styling (Tailwind/CSS/MUI)
+- Maintain theme configuration
+- Reuse existing components
+- Cursor may suggest composition over inheritance where appropriate
+
+FRONTEND–BACKEND CONTRACT:
+
+- Do not change API contracts implicitly
+- Maintain DTO alignment
+- Respect auth token handling
+
+=========================================
+DESIGN PATTERNS — ACTIONABLE GUIDANCE
+=========================================
+
+ALREADY USED / ALLOWED:
+
+- Layered Architecture (Controller-Service-Repository)
+- DTO Pattern
+- Repository Pattern
+- Mapper Pattern
+- Strategy Pattern (Services)
+- Template Pattern (shared service logic)
+- Composition (Frontend components/hooks)
+
+APPLY DURING FUTURE DEVELOPMENT:
+
+- Cursor must suggest patterns in **inline comments** when beneficial
+- Strategy and Template patterns in services/hooks where conditional logic exists
+- Composition over inheritance in UI
+- Use existing patterns without creating new packages
+
+FORBIDDEN:
+
+- Hexagonal Architecture
+- CQRS or Event-driven restructuring
+- Folder/package restructuring
+- Over-engineered factory layers
+
+=========================================
+SOLID PRINCIPLES — ACTIONABLE GUIDANCE
+=========================================
+
+Single Responsibility (SRP):
+
+- Classes and methods must have one reason to change
+- Cursor must highlight violations and suggest method splitting
+- Frontend components/hooks must have a single responsibility
+
+Open/Closed (OCP):
+
+- Extend existing behavior instead of modifying
+- Cursor should suggest extension points without rewriting existing logic
+
+Liskov Substitution (LSP):
+
+- Respect existing inheritance
+- Cursor must warn if derived classes break contracts
+
+Interface Segregation (ISP):
+
+- Only apply to existing interfaces
+- Cursor must suggest focused interfaces inside current boundaries
+
+Dependency Inversion (DIP):
+
+- Use Spring DI and existing providers
+- Cursor must warn against hard-coded dependencies
+
+=========================================
+PHASE 3 — FUTURE DEVELOPMENT CONFIRMATION
+=========================================
+
+Before implementing any feature:
+
+- Confirm alignment with current architecture
+- Ensure no folder/package changes
+- Apply patterns/SOLID behaviorally
+- Provide **inline guidance/comments** on pattern/SOLID usage
+- Highlight where patterns are already applied
+
+=========================================
+GLOBAL RULES
+=========================================
+
+- NO architectural redesign
+- NO folder restructuring
+- NO pattern replacement
+- EVOLUTION > REVOLUTION
+- CONSISTENCY > THEORY
+- MAINTAINABILITY > CLEVERNESS
+- Cursor must provide suggestions and inline guidance on patterns/SOLID
+- All new code must follow these rules and respect existing conventions

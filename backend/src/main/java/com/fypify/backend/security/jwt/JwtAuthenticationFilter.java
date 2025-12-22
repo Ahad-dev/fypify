@@ -20,6 +20,37 @@ import java.util.UUID;
 
 /**
  * JWT Authentication filter that validates tokens on every request.
+ * 
+ * ===========================================================================================
+ *                              GANG OF FOUR (GoF) DESIGN PATTERNS USED
+ * ===========================================================================================
+ * 
+ * 1. CHAIN OF RESPONSIBILITY PATTERN (Behavioral)
+ *    - Part of Spring Security's filter chain.
+ *    - Processes JWT token and either authenticates user or passes to next filter.
+ *    - Calls filterChain.doFilter() to pass request to next handler in chain.
+ * 
+ * 2. TEMPLATE METHOD PATTERN (Behavioral) - OncePerRequestFilter
+ *    - Extends OncePerRequestFilter which provides template method pattern.
+ *    - doFilterInternal() is the hook method we override.
+ *    - Parent class handles: request tracking, single execution per request.
+ * 
+ * 3. STRATEGY PATTERN (Behavioral) - JwtTokenProvider
+ *    - Token validation is delegated to JwtTokenProvider (strategy).
+ *    - Could swap to different token validation strategies (OAuth2, SAML).
+ * 
+ * 4. SINGLETON PATTERN (Creational) - via Spring @Component
+ *    - Single filter instance processes all requests.
+ * 
+ * ===========================================================================================
+ *                              PATTERNS THAT COULD BE APPLIED HERE
+ * ===========================================================================================
+ * 
+ * 1. DECORATOR PATTERN (Structural) - Suggested for Filter Enhancement
+ *    - Wrap this filter with decorators: LoggingFilterDecorator, MetricsFilterDecorator
+ *    - Add cross-cutting concerns without modifying core logic.
+ * 
+ * ===========================================================================================
  */
 @Slf4j
 @Component

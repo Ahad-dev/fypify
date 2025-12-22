@@ -35,6 +35,71 @@ import java.util.stream.Collectors;
 
 /**
  * Service for student group operations.
+ * 
+ * ===========================================================================================
+ *                              GANG OF FOUR (GoF) DESIGN PATTERNS USED
+ * ===========================================================================================
+ * 
+ * 1. FACADE PATTERN (Structural)
+ *    - This service acts as a FACADE that provides a simplified interface to the complex
+ *      subsystem of group management (repositories, notifications, emails, audit logs).
+ *    - Clients (controllers) don't need to know about the complexity behind group operations.
+ *    - Example: createGroup() method hides the complexity of validation, entity creation,
+ *               member management, and audit logging.
+ * 
+ * 2. SINGLETON PATTERN (Creational) - via Spring @Service
+ *    - Spring manages this service as a Singleton bean by default.
+ *    - Only one instance exists in the application context, shared across all requests.
+ *    - Thread safety achieved via stateless design (no mutable instance fields).
+ * 
+ * 3. BUILDER PATTERN (Creational) - via Lombok @Builder on DTOs and Entities
+ *    - Used extensively for creating complex objects like StudentGroup, GroupMember, GroupInvite.
+ *    - Separates construction of complex objects from their representation.
+ *    - Example: StudentGroup.builder().name(...).leader(...).members(...).build()
+ * 
+ * 4. DEPENDENCY INJECTION (DIP from SOLID, related to GoF patterns)
+ *    - Constructor injection via @RequiredArgsConstructor implements Inversion of Control.
+ *    - Dependencies are injected as interfaces (e.g., NotificationService, EmailService).
+ *    - This enables loose coupling and easier testing with mocks.
+ * 
+ * ===========================================================================================
+ *                              PATTERNS THAT COULD BE APPLIED HERE
+ * ===========================================================================================
+ * 
+ * 1. STRATEGY PATTERN (Behavioral) - Suggested
+ *    - WHERE: Permission validation logic (isLeader, isAdmin checks)
+ *    - HOW: Create GroupPermissionStrategy interface with implementations for different roles.
+ *    - BENEFIT: Replace scattered if-else permission checks with polymorphic behavior.
+ *    - Example:
+ *      interface GroupPermissionStrategy {
+ *          boolean canUpdateGroup(User actor, StudentGroup group);
+ *          boolean canDeleteGroup(User actor, StudentGroup group);
+ *          boolean canRemoveMember(User actor, StudentGroup group, UUID memberId);
+ *      }
+ *      class LeaderPermissionStrategy implements GroupPermissionStrategy { ... }
+ *      class AdminPermissionStrategy implements GroupPermissionStrategy { ... }
+ * 
+ * 2. OBSERVER PATTERN (Behavioral) - Suggested
+ *    - WHERE: Group events (member joined, invite sent, group deleted)
+ *    - HOW: Use Spring Events (@EventPublisher, @EventListener) instead of direct service calls.
+ *    - BENEFIT: Decouple group operations from side effects (notifications, emails, audit logs).
+ *    - Example:
+ *      // In this service:
+ *      eventPublisher.publishEvent(new MemberJoinedEvent(group, member));
+ *      
+ *      // Separate listener:
+ *      @EventListener
+ *      public void onMemberJoined(MemberJoinedEvent event) {
+ *          notificationService.sendNotification(...);
+ *          emailService.sendEmail(...);
+ *      }
+ * 
+ * 3. TEMPLATE METHOD PATTERN (Behavioral) - Suggested
+ *    - WHERE: CRUD operations that share common structure (validate → execute → audit → notify)
+ *    - HOW: Create abstract base method with hooks for subclass customization.
+ *    - BENEFIT: Enforce consistent operation flow while allowing flexibility.
+ * 
+ * ===========================================================================================
  */
 @Slf4j
 @Service
@@ -543,8 +608,24 @@ public class GroupService {
         return Page.empty();
     }
 
+    // ===========================================================================================
+    //                     MAPPER METHODS - Related to GoF ADAPTER PATTERN
+    // ===========================================================================================
+    // These toDto() methods act as ADAPTERS that transform Entity objects into DTO objects.
+    // While not a pure Adapter Pattern implementation, they serve the same purpose:
+    // converting one interface (Entity) into another interface (DTO) that clients expect.
+    //
+    // SUGGESTION: For larger applications, consider extracting these into a dedicated 
+    // GroupMapper class following the MAPPER PATTERN (a specialized form of Adapter Pattern).
+    // This would improve SRP compliance and allow reuse across multiple services.
+    // ===========================================================================================
+
     /**
      * Convert StudentGroup entity to DTO.
+     * 
+     * GoF Pattern: ADAPTER PATTERN (Structural) - Inline Implementation
+     * - Converts Entity (internal representation) to DTO (external representation)
+     * - Uses BUILDER PATTERN for constructing the DTO object
      */
     public GroupDto toDto(StudentGroup group) {
         List<GroupMemberDto> memberDtos = group.getMembers().stream()

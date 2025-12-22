@@ -11,6 +11,43 @@ import java.util.UUID;
 /**
  * User entity representing all users in the system.
  * Maps to the 'users' table.
+ * 
+ * ===========================================================================================
+ *                              GANG OF FOUR (GoF) DESIGN PATTERNS USED
+ * ===========================================================================================
+ * 
+ * 1. BUILDER PATTERN (Creational) - via Lombok @Builder
+ *    - Enables fluent construction: User.builder().fullName("John").email("j@x.com").build()
+ *    - Handles optional parameters elegantly (e.g., @Builder.Default for isActive)
+ * 
+ * 2. STRATEGY PATTERN (Behavioral) - Role-based Behavior
+ *    - Helper methods (isAdmin(), isStudent(), isSupervisor()) enable role-based branching.
+ *    - Role determines user's capabilities and permissions.
+ *    - Note: This could be enhanced with a RoleStrategy interface for polymorphic behavior.
+ * 
+ * ===========================================================================================
+ *                              PATTERNS THAT COULD BE APPLIED HERE
+ * ===========================================================================================
+ * 
+ * 1. STATE PATTERN (Behavioral) - Suggested for User Account Status
+ *    - User states: PENDING_VERIFICATION, ACTIVE, SUSPENDED, DELETED
+ *    - State determines allowed operations (e.g., SUSPENDED can't login)
+ * 
+ * 2. STRATEGY PATTERN (Behavioral) - Enhanced Role Strategy
+ *    - Instead of isAdmin(), isStudent() methods, use polymorphic Role strategies:
+ *      interface RoleBehavior {
+ *          boolean canCreateGroup();
+ *          boolean canApproveProject();
+ *          List<String> getPermissions();
+ *      }
+ *      class StudentRoleBehavior implements RoleBehavior { ... }
+ *      class AdminRoleBehavior implements RoleBehavior { ... }
+ * 
+ * 3. DECORATOR PATTERN (Structural) - Suggested for User Capabilities
+ *    - Wrap User with decorators for additional capabilities.
+ *    - Example: PremiumUserDecorator, VerifiedUserDecorator
+ * 
+ * ===========================================================================================
  */
 @Entity
 @Table(name = "users")
