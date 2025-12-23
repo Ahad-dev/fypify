@@ -35,6 +35,21 @@ public interface ProjectRepository extends JpaRepository<Project, UUID> {
     Page<Project> findByStatus(ProjectStatus status, Pageable pageable);
 
     /**
+     * Find projects by status with all relations loaded.
+     * Includes: group, group leader, group members with students, supervisor, approvedBy.
+     */
+    @Query(value = "SELECT DISTINCT p FROM Project p " +
+           "LEFT JOIN FETCH p.group g " +
+           "LEFT JOIN FETCH g.leader " +
+           "LEFT JOIN FETCH g.members gm " +
+           "LEFT JOIN FETCH gm.student " +
+           "LEFT JOIN FETCH p.supervisor " +
+           "LEFT JOIN FETCH p.approvedBy " +
+           "WHERE p.status = :status",
+           countQuery = "SELECT COUNT(p) FROM Project p WHERE p.status = :status")
+    Page<Project> findByStatusWithRelations(@Param("status") ProjectStatus status, Pageable pageable);
+
+    /**
      * Find projects by supervisor ID.
      */
     Page<Project> findBySupervisorId(UUID supervisorId, Pageable pageable);
@@ -117,4 +132,15 @@ public interface ProjectRepository extends JpaRepository<Project, UUID> {
      * Find projects by status and supervisor.
      */
     Page<Project> findByStatusAndSupervisorId(ProjectStatus status, UUID supervisorId, Pageable pageable);
+
+    /**
+     * Find projects by deadline batch ID.
+     * Used for processing deadlines across all projects in a batch.
+     */
+    @Query("SELECT p FROM Project p " +
+           "LEFT JOIN FETCH p.group g " +
+           "LEFT JOIN FETCH p.supervisor " +
+           "WHERE p.deadlineBatch.id = :batchId " +
+           "AND p.status IN ('APPROVED', 'IN_PROGRESS')")
+    List<Project> findByDeadlineBatchId(@Param("batchId") UUID batchId);
 }

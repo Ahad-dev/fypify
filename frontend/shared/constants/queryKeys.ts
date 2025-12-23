@@ -190,6 +190,26 @@ export const QUERY_KEYS = {
     // Supervisors
     supervisors: () => [...QUERY_KEYS.committee.all, 'supervisors'] as const,
   },
+
+  // ============ FILES ============
+  files: {
+    all: ['files'] as const,
+    detail: (id: string) => [...QUERY_KEYS.files.all, 'detail', id] as const,
+  },
+
+  // ============ SUBMISSIONS ============
+  submissions: {
+    all: ['submissions'] as const,
+    lists: () => [...QUERY_KEYS.submissions.all, 'list'] as const,
+    byProject: (projectId: string) => [...QUERY_KEYS.submissions.all, 'project', projectId] as const,
+    byProjectAndType: (projectId: string, docTypeId: string) => 
+      [...QUERY_KEYS.submissions.all, 'project', projectId, 'type', docTypeId] as const,
+    latest: (projectId: string, docTypeId: string) => 
+      [...QUERY_KEYS.submissions.all, 'latest', projectId, docTypeId] as const,
+    detail: (id: string) => [...QUERY_KEYS.submissions.all, 'detail', id] as const,
+    pending: () => [...QUERY_KEYS.submissions.all, 'pending'] as const,
+    deadlines: (projectId: string) => [...QUERY_KEYS.submissions.all, 'deadlines', projectId] as const,
+  },
 } as const;
 
 // Type helper for extracting query key types

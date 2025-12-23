@@ -5,3 +5,5 @@ export * from './useGroup';
 export * from './useProject';
 export * from './useNotification';
 export * from './useCommittee';
+export * from './useFile';
+export * from './useSubmission';

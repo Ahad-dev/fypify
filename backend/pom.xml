@@ -93,6 +93,13 @@
 		<version>1.39.0</version>
 	</dependency>
 
+	<!-- Spring Dotenv - Auto-loads .env files -->
+	<dependency>
+		<groupId>me.paulschwarz</groupId>
+		<artifactId>spring-dotenv</artifactId>
+		<version>4.0.0</version>
+	</dependency>
+
 	<!-- MapStruct for DTO Mapping -->
 	<dependency>
 		<groupId>org.mapstruct</groupId>

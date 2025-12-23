@@ -70,4 +70,34 @@ public interface ProjectDeadlineRepository extends JpaRepository<ProjectDeadline
      * Delete all deadlines for a batch.
      */
     void deleteByBatchId(UUID batchId);
+
+    /**
+     * Find deadline for a specific project and document type.
+     * Joins through project's deadline_batch.
+     */
+    @Query("""
+        SELECT pd FROM ProjectDeadline pd
+        JOIN pd.batch b
+        JOIN Project p ON p.deadlineBatch.id = b.id
+        WHERE p.id = :projectId
+        AND pd.documentType.id = :documentTypeId
+        """)
+    java.util.Optional<ProjectDeadline> findByProjectIdAndDocumentTypeId(
+            @Param("projectId") UUID projectId,
+            @Param("documentTypeId") UUID documentTypeId
+    );
+
+    /**
+     * Find all passed deadlines with active batches that need processing.
+     * Used for auto-locking submissions after deadline.
+     */
+    @Query("""
+        SELECT pd FROM ProjectDeadline pd
+        JOIN FETCH pd.documentType
+        JOIN FETCH pd.batch b
+        WHERE pd.deadlineDate <= :now
+        AND b.isActive = true
+        ORDER BY pd.deadlineDate ASC
+        """)
+    List<ProjectDeadline> findAllPassedDeadlines(@Param("now") Instant now);
 }

@@ -37,5 +37,10 @@ public class SubmissionDto {
     private Boolean canEdit;
     private Boolean canMarkFinal;
     private Boolean isLocked;
+    
+    // Deadline-related fields
+    private Instant deadlineDate;
+    private Boolean isLate;
+    private Boolean deadlinePassed;
 }
 

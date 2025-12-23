@@ -48,6 +48,7 @@ import {
   AlertCircle,
   Loader2,
   GraduationCap,
+  Eye,
 } from 'lucide-react';
 import {
   useCommitteePendingProjects,
@@ -58,6 +59,7 @@ import {
   useSupervisors,
 } from '@/shared/hooks';
 import { Project, DeadlineBatch, SupervisorOption, ApproveProjectRequest, RejectProjectRequest } from '@/shared/types';
+import { ProjectDetailsModal } from '@/components/project';
 
 // ============ Form Schemas ============
 
@@ -96,6 +98,7 @@ const getStatusBadgeVariant = (status: string) => {
 export default function FypCommitteeProjectsPage() {
   const [approveDialogOpen, setApproveDialogOpen] = React.useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = React.useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = React.useState(false);
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
 
   // Data fetching
@@ -144,7 +147,7 @@ export default function FypCommitteeProjectsPage() {
   // Handlers
   const handleOpenApproveDialog = (project: Project) => {
     setSelectedProject(project);
-    
+    console.log(project)
     // Pre-select proposed supervisor if available
     if (project.proposedSupervisors && project.proposedSupervisors.length > 0 && availableSupervisors) {
       const proposedId = project.proposedSupervisors[0];
@@ -160,6 +163,11 @@ export default function FypCommitteeProjectsPage() {
   const handleOpenRejectDialog = (project: Project) => {
     setSelectedProject(project);
     setRejectDialogOpen(true);
+  };
+
+  const handleOpenViewDialog = (project: Project) => {
+    setSelectedProject(project);
+    setViewDialogOpen(true);
   };
 
   const handleApprove = async (data: ApproveFormData) => {
@@ -191,6 +199,7 @@ export default function FypCommitteeProjectsPage() {
   // Get selected batch for preview
   const selectedBatchId = approveForm.watch('deadlineBatchId');
   const selectedBatch = activeBatches.find((b) => b.id === selectedBatchId);
+  console.log("Selected Batch: " , selectedBatch)
 
   // Table columns
   const columns: ColumnDef<Project>[] = [
@@ -263,6 +272,14 @@ export default function FypCommitteeProjectsPage() {
         const project = row.original;
         return (
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenViewDialog(project)}
+              title="View Details"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
             <Button
               size="sm"
               variant="default"
@@ -384,8 +401,8 @@ export default function FypCommitteeProjectsPage() {
           </Card>
 
           {/* Approve Dialog */}
-          <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
-            <DialogContent className="max-w-lg">
+          <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen} >
+            <DialogContent className="max-w-lg h-[calc(100vh-5rem)] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Approve Project</DialogTitle>
                 <DialogDescription>
@@ -487,7 +504,7 @@ export default function FypCommitteeProjectsPage() {
                               <div className="space-y-1">
                                 {selectedBatch.deadlines.map((deadline) => (
                                   <div key={deadline.id} className="flex justify-between text-xs">
-                                    <span>{deadline.documentTypeName}</span>
+                                    <span>{deadline.documentTypeTitle}</span>
                                     <span className={deadline.isPast ? 'text-red-500' : ''}>
                                       {format(new Date(deadline.deadlineDate), 'MMM d, yyyy')}
                                     </span>
@@ -626,6 +643,13 @@ export default function FypCommitteeProjectsPage() {
               </Form>
             </DialogContent>
           </Dialog>
+
+          {/* View Project Details Modal */}
+          <ProjectDetailsModal
+            project={selectedProject}
+            open={viewDialogOpen}
+            onOpenChange={setViewDialogOpen}
+          />
         </div>
       </MainLayout>
     </RoleGuard>

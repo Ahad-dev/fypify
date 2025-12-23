@@ -195,5 +195,21 @@ public class SubmissionController {
         SubmissionDto submission = submissionService.lockForEvaluation(id, actor);
         return ResponseEntity.ok(ApiResponse.success(submission, "Submission locked for evaluation"));
     }
+
+    // ==================== Project Deadlines ====================
+
+    /**
+     * Get all deadlines for a project.
+     * GET /api/v1/projects/{projectId}/deadlines
+     */
+    @GetMapping("/projects/{projectId}/deadlines")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get project deadlines", description = "Get all deadlines for a project")
+    public ResponseEntity<ApiResponse<List<com.fypify.backend.modules.committee.dto.ProjectDeadlineDto>>> getProjectDeadlines(
+            @PathVariable UUID projectId
+    ) {
+        List<com.fypify.backend.modules.committee.dto.ProjectDeadlineDto> deadlines = submissionService.getProjectDeadlines(projectId);
+        return ResponseEntity.ok(ApiResponse.success(deadlines));
+    }
 }
 

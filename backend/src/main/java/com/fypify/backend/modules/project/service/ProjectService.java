@@ -471,7 +471,11 @@ public class ProjectService {
      * Convert Project entity to DTO with full details.
      */
     public ProjectDto toDtoWithDetails(Project project) {
+
+        // print project 
+        
         ProjectDto dto = toDto(project);
+        System.out.println("Project details: " + dto);
 
         // Add full group details
         if (project.getGroup() != null) {
