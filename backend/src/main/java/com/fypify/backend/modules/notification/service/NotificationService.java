@@ -23,6 +23,48 @@ import java.util.stream.Collectors;
 
 /**
  * Service for notification operations.
+ * 
+ * ===========================================================================================
+ *                              GANG OF FOUR (GoF) DESIGN PATTERNS USED
+ * ===========================================================================================
+ * 
+ * 1. FACADE PATTERN (Structural)
+ *    - Provides simplified interface to notification subsystem.
+ *    - Hides complexity of notification creation, persistence, and delivery.
+ * 
+ * 2. FACTORY METHOD PATTERN (Creational) - via Notification Entity
+ *    - Uses static factory methods in Notification class:
+ *      Notification.groupInviteReceived(), Notification.projectRegistered()
+ *    - Encapsulates notification creation with domain-specific names.
+ * 
+ * 3. BUILDER PATTERN (Creational) - via Lombok
+ *    - NotificationDto.builder() for constructing DTOs.
+ *    - Notification.builder() for creating entities.
+ * 
+ * ===========================================================================================
+ *                              PATTERNS THAT COULD BE APPLIED HERE
+ * ===========================================================================================
+ * 
+ * 1. OBSERVER PATTERN (Behavioral) - Suggested for Event-Driven Notifications
+ *    - Currently, services directly call sendNotification().
+ *    - Better approach: Services publish domain events, NotificationService listens.
+ *    - Example:
+ *      @EventListener
+ *      public void onGroupInviteSent(GroupInviteSentEvent event) {
+ *          sendGroupInviteNotification(event.getInvitee(), event.getGroupId(), ...);
+ *      }
+ *    - Benefit: Decouples notification from business logic.
+ * 
+ * 2. STRATEGY PATTERN (Behavioral) - Suggested for Notification Channels
+ *    - Interface: NotificationChannel { void send(Notification n); }
+ *    - Implementations: InAppChannel, EmailChannel, PushChannel, SlackChannel
+ *    - Benefit: Add new channels without modifying service.
+ * 
+ * 3. DECORATOR PATTERN (Structural) - Suggested for Notification Enhancement
+ *    - Decorators: BatchNotificationDecorator, ThrottledNotificationDecorator
+ *    - Add behavior like batching or rate limiting.
+ * 
+ * ===========================================================================================
  */
 @Slf4j
 @Service

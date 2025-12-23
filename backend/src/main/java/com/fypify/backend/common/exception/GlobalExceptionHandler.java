@@ -25,6 +25,52 @@ import java.util.Map;
 /**
  * Global exception handler for the application.
  * Transforms exceptions into standardized API responses.
+ * 
+ * ===========================================================================================
+ *                              GANG OF FOUR (GoF) DESIGN PATTERNS USED
+ * ===========================================================================================
+ * 
+ * 1. CHAIN OF RESPONSIBILITY PATTERN (Behavioral)
+ *    - Multiple @ExceptionHandler methods form a chain for handling exceptions.
+ *    - Spring tries handlers in order of specificity (most specific exception first).
+ *    - If no specific handler matches, the generic Exception handler catches it.
+ *    - Each handler decides how to respond to its specific exception type.
+ * 
+ * 2. TEMPLATE METHOD PATTERN (Behavioral) - Implicit
+ *    - All handlers follow the same template: Log → Create ApiResponse → Return ResponseEntity
+ *    - The algorithm skeleton is the same, but specific details vary per exception type.
+ *    - Could be made explicit by extracting common logic to a template method.
+ * 
+ * 3. SINGLETON PATTERN (Creational) - via Spring @RestControllerAdvice
+ *    - Single instance handles all exceptions across the application.
+ *    - Centralized error handling avoids code duplication in controllers.
+ * 
+ * 4. ADAPTER PATTERN (Structural) - Exception to ApiResponse
+ *    - Each handler adapts different exception types into a unified ApiResponse format.
+ *    - Clients always receive the same response structure regardless of exception type.
+ * 
+ * ===========================================================================================
+ *                              PATTERNS THAT COULD BE APPLIED HERE
+ * ===========================================================================================
+ * 
+ * 1. STRATEGY PATTERN (Behavioral) - Suggested for Exception Handling Strategies
+ *    - Create ExceptionHandlingStrategy interface with implementations per exception type.
+ *    - Register strategies in a Map<Class<? extends Exception>, ExceptionHandlingStrategy>
+ *    - Benefit: More extensible and testable exception handling.
+ *    - Example:
+ *      interface ExceptionHandlingStrategy {
+ *          ResponseEntity<ApiResponse<Void>> handle(Exception ex);
+ *      }
+ *      Map<Class<?>, ExceptionHandlingStrategy> strategies = Map.of(
+ *          ResourceNotFoundException.class, new NotFoundStrategy(),
+ *          ValidationException.class, new ValidationStrategy()
+ *      );
+ * 
+ * 2. FACTORY METHOD PATTERN (Creational) - Suggested for ApiError Creation
+ *    - Create ApiErrorFactory to encapsulate error object creation.
+ *    - Different factory methods for different error types.
+ * 
+ * ===========================================================================================
  */
 @Slf4j
 @RestControllerAdvice

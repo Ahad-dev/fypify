@@ -13,6 +13,34 @@ import java.time.Instant;
  * Provides consistent response format across the application.
  *
  * @param <T> The type of data being returned
+ * 
+ * ===========================================================================================
+ *                              GANG OF FOUR (GoF) DESIGN PATTERNS USED
+ * ===========================================================================================
+ * 
+ * 1. BUILDER PATTERN (Creational) - via Lombok @Builder
+ *    - Enables fluent construction of ApiResponse objects.
+ *    - Example: ApiResponse.<User>builder().success(true).data(user).build()
+ * 
+ * 2. FACTORY METHOD PATTERN (Creational) - Static Factory Methods
+ *    - success(data), success(data, message), error(code, message) are factory methods.
+ *    - Encapsulate object creation with descriptive, intention-revealing names.
+ *    - Hide Builder complexity for common use cases.
+ *    - Example: ApiResponse.success(data) vs ApiResponse.builder().success(true).data(data).build()
+ * 
+ * 3. GENERIC TYPE PATTERN (Language Feature, supports patterns)
+ *    - Generic <T> allows type-safe responses for any data type.
+ *    - Compile-time type checking prevents runtime errors.
+ * 
+ * ===========================================================================================
+ *                              PATTERNS THAT COULD BE APPLIED HERE
+ * ===========================================================================================
+ * 
+ * 1. DECORATOR PATTERN (Structural) - Suggested for Response Enhancement
+ *    - Create decorators for adding metadata: PaginatedApiResponse, CacheableApiResponse
+ *    - Wrap base response with additional information without modifying it.
+ * 
+ * ===========================================================================================
  */
 @Data
 @Builder

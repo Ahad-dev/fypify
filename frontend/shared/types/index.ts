@@ -18,3 +18,6 @@ export * from './notification.types';
 
 // Committee types
 export * from './committee.types';
+
+// Submission types
+export * from './submission.types';

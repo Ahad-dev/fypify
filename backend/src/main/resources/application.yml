@@ -10,9 +10,9 @@ spring:
   # Database Configuration (NeonDB PostgreSQL)
   # ============================================
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://ep-solitary-mountain-ade09kl7-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require}
-    username: ${DB_USERNAME:neondb_owner}
-    password: ${DB_PASSWORD:npg_FTtZwKx0chn4}
+    url: ${DATABASE_URL:}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -67,7 +67,7 @@ server:
 # JWT Configuration
 # ============================================
 jwt:
-  secret: ${JWT_SECRET:your-secret-key-change-this-in-production-minimum-256-bits}
+  secret: ${JWT_SECRET:}
   access-expiration: 900000       # 15 minutes in milliseconds
   refresh-expiration: 604800000   # 7 days in milliseconds
 
@@ -136,8 +136,8 @@ management:
 email:
   enabled: ${EMAIL_ENABLED:true}
   from:
-    address: ${EMAIL_FROM_ADDRESS:nityfool981@gmail.com}
-    name: ${EMAIL_FROM_NAME:FYPIFY}
+    address: ${EMAIL_FROM_ADDRESS:}
+    name: ${EMAIL_FROM_NAME:}
 
 spring.mail:
   host: smtp.gmail.com

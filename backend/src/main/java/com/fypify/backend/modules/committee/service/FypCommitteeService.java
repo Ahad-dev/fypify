@@ -67,10 +67,11 @@ public class FypCommitteeService {
 
     /**
      * Get all pending projects for FYP Committee review.
+     * Returns projects with full details including group members, supervisor, etc.
      */
     public Page<ProjectDto> getPendingProjects(Pageable pageable) {
-        return projectRepository.findByStatus(ProjectStatus.PENDING_APPROVAL, pageable)
-                .map(projectService::toDto);
+        return projectRepository.findByStatusWithRelations(ProjectStatus.PENDING_APPROVAL, pageable)
+                .map(project -> projectService.toDtoWithDetails(project));
     }
 
     /**

@@ -7,6 +7,34 @@ import java.util.Map;
  * Email Service Interface.
  * Provides methods for sending various types of emails asynchronously.
  * All email operations are non-blocking and failures are logged but not propagated.
+ * 
+ * ===========================================================================================
+ *                              GANG OF FOUR (GoF) DESIGN PATTERNS USED
+ * ===========================================================================================
+ * 
+ * 1. STRATEGY PATTERN (Behavioral) - Interface defines Email Strategy
+ *    - This interface defines the strategy for sending emails.
+ *    - EmailServiceImpl is the concrete strategy for SMTP/Gmail.
+ *    - Future implementations: SendGridEmailService, SesEmailService, MockEmailService
+ *    - Clients depend on interface, not implementation (DIP).
+ * 
+ * 2. TEMPLATE METHOD PATTERN (Behavioral) - Implicit in method signatures
+ *    - All specialized email methods (sendProjectRegisteredEmail, etc.) follow a template.
+ *    - They prepare data → call core method → handle result.
+ * 
+ * ===========================================================================================
+ *                              PATTERNS THAT COULD BE APPLIED HERE
+ * ===========================================================================================
+ * 
+ * 1. ABSTRACT FACTORY PATTERN (Creational) - Suggested
+ *    - Create EmailServiceFactory that produces different email service implementations
+ *      based on configuration (SMTP, SendGrid, AWS SES, etc.)
+ * 
+ * 2. DECORATOR PATTERN (Structural) - Suggested
+ *    - Create decorators: RetryableEmailService, LoggingEmailService, RateLimitedEmailService
+ *    - Each decorator adds behavior without modifying the core implementation.
+ * 
+ * ===========================================================================================
  */
 public interface EmailService {
 

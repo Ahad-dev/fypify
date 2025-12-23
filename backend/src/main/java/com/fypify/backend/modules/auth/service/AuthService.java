@@ -31,6 +31,47 @@ import java.util.UUID;
 
 /**
  * Service for authentication operations.
+ * 
+ * ===========================================================================================
+ *                              GANG OF FOUR (GoF) DESIGN PATTERNS USED
+ * ===========================================================================================
+ * 
+ * 1. FACADE PATTERN (Structural)
+ *    - This service acts as a FACADE over authentication subsystem complexity.
+ *    - Hides: AuthenticationManager, JwtTokenProvider, UserRepository, PasswordEncoder
+ *    - Clients (AuthController) interact with simple methods: login(), register(), refreshToken()
+ * 
+ * 2. SINGLETON PATTERN (Creational) - via Spring @Service
+ *    - Single instance manages all authentication operations.
+ *    - Stateless design ensures thread safety.
+ * 
+ * 3. BUILDER PATTERN (Creational) - via Lombok and LoginResponse.of()
+ *    - User.builder() for creating user entities.
+ *    - LoginResponse.of() is a static factory method (related to Builder).
+ * 
+ * 4. STRATEGY PATTERN (Behavioral) - AuthenticationManager
+ *    - AuthenticationManager uses strategy pattern internally.
+ *    - Different AuthenticationProvider strategies can be plugged in.
+ *    - DaoAuthenticationProvider is the current strategy for database authentication.
+ * 
+ * ===========================================================================================
+ *                              PATTERNS THAT COULD BE APPLIED HERE
+ * ===========================================================================================
+ * 
+ * 1. FACTORY METHOD PATTERN (Creational) - Suggested for Token Generation
+ *    - Create TokenFactory interface for generating different token types.
+ *    - Implementations: JwtTokenFactory, OAuth2TokenFactory, etc.
+ *    - Benefit: Easy to swap token generation strategies.
+ * 
+ * 2. TEMPLATE METHOD PATTERN (Behavioral) - Suggested for Auth Flow
+ *    - Common auth flow: Validate → Authenticate → GenerateTokens → BuildResponse
+ *    - Template method defines skeleton, subclasses customize steps.
+ * 
+ * 3. OBSERVER PATTERN (Behavioral) - Suggested for Auth Events
+ *    - Publish events: LoginSuccessEvent, LoginFailedEvent, RegistrationEvent
+ *    - Listeners can handle: audit logging, rate limiting, notifications
+ * 
+ * ===========================================================================================
  */
 @Slf4j
 @Service

@@ -23,6 +23,44 @@ import java.util.Map;
  * Handles all email sending functionality using Gmail SMTP.
  * All methods are async to avoid blocking business logic.
  * Failures are logged but never propagated to callers.
+ * 
+ * ===========================================================================================
+ *                              GANG OF FOUR (GoF) DESIGN PATTERNS USED
+ * ===========================================================================================
+ * 
+ * 1. STRATEGY PATTERN (Behavioral) - Concrete Strategy Implementation
+ *    - Implements EmailService interface (the strategy interface).
+ *    - This is the SMTP/Gmail strategy for email delivery.
+ *    - Can be swapped with SendGridEmailServiceImpl, SesEmailServiceImpl without client changes.
+ * 
+ * 2. TEMPLATE METHOD PATTERN (Behavioral)
+ *    - sendTemplateEmail() is a template method that:
+ *      a) Checks if email is enabled
+ *      b) Prepares common variables (frontendUrl, year)
+ *      c) Processes Thymeleaf template
+ *      d) Creates and sends MIME message
+ *    - Specialized methods (sendProjectApprovedEmail, etc.) call this template method.
+ * 
+ * 3. SINGLETON PATTERN (Creational) - via Spring @Service
+ *    - Single instance handles all email operations across the application.
+ * 
+ * 4. ADAPTER PATTERN (Structural) - TemplateEngine Integration
+ *    - Adapts Thymeleaf TemplateEngine to work with email sending.
+ *    - Converts template name + variables into HTML content for emails.
+ * 
+ * ===========================================================================================
+ *                              PATTERNS THAT COULD BE APPLIED HERE
+ * ===========================================================================================
+ * 
+ * 1. BUILDER PATTERN (Creational) - Suggested for Email Message Construction
+ *    - Create EmailMessage.builder() for fluent email construction.
+ *    - Example: EmailMessage.builder().to(email).subject(s).template(t).variables(v).build()
+ * 
+ * 2. FLYWEIGHT PATTERN (Structural) - Suggested for Template Caching
+ *    - Cache compiled templates to reduce memory and processing overhead.
+ *    - Share common template parts across multiple emails.
+ * 
+ * ===========================================================================================
  */
 @Slf4j
 @Service

@@ -26,6 +26,54 @@ import java.util.UUID;
 /**
  * Controller for Student Group operations.
  * Provides endpoints for group management, membership, and invitations.
+ * 
+ * ===========================================================================================
+ *                              GANG OF FOUR (GoF) DESIGN PATTERNS USED
+ * ===========================================================================================
+ * 
+ * 1. FACADE PATTERN (Structural) - Controller as Thin Facade
+ *    - This controller acts as a thin facade over the GroupService.
+ *    - It delegates all business logic to the service layer (SRP compliance).
+ *    - Each endpoint method follows the same structure:
+ *      Request → Validate → Delegate to Service → Wrap in ApiResponse → Return
+ * 
+ * 2. SINGLETON PATTERN (Creational) - via Spring @RestController
+ *    - Controller is a singleton bean managed by Spring container.
+ *    - Single instance handles all HTTP requests for this endpoint.
+ * 
+ * 3. DEPENDENCY INJECTION PATTERN
+ *    - Uses @RequiredArgsConstructor for constructor-based DI.
+ *    - Dependencies (GroupService, UserService) injected at creation time.
+ *    - Promotes loose coupling and testability.
+ * 
+ * ===========================================================================================
+ *                              PATTERNS THAT COULD BE APPLIED HERE
+ * ===========================================================================================
+ * 
+ * 1. COMMAND PATTERN (Behavioral) - Suggested for Complex Operations
+ *    - WHERE: Each endpoint could encapsulate its operation as a Command object.
+ *    - HOW: Create Command classes (CreateGroupCommand, DeleteGroupCommand, etc.)
+ *    - BENEFIT: Enables undo/redo, logging, and queuing of operations.
+ *    - Example:
+ *      public interface GroupCommand<T> {
+ *          T execute();
+ *      }
+ *      
+ *      class CreateGroupCommand implements GroupCommand<GroupDto> {
+ *          private final CreateGroupRequest request;
+ *          private final User creator;
+ *          private final GroupService service;
+ *          
+ *          public GroupDto execute() {
+ *              return service.createGroup(request, creator);
+ *          }
+ *      }
+ * 
+ * 2. DECORATOR PATTERN (Structural) - Suggested for Cross-Cutting Concerns
+ *    - Already partially implemented via Spring AOP (@PreAuthorize, @Valid)
+ *    - Could be extended for custom logging, metrics, or caching decorators.
+ * 
+ * ===========================================================================================
  */
 @RestController
 @RequestMapping("/api/v1/groups")

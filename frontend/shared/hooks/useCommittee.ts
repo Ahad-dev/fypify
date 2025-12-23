@@ -143,7 +143,7 @@ export function useCreateDeadlineBatch() {
       toast.success(`Deadline batch "${batch.name}" created successfully!`);
     },
     onError: (error: any) => {
-      const message = error?.message || error?.response?.data?.message || 'Failed to create deadline batch';
+      const message = error?.response?.data?.error?.message || 'Failed to create deadline batch';
       toast.error('Creation Failed', { description: message });
     },
   });

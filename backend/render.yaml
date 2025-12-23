@@ -6,9 +6,11 @@
 # - DB_USERNAME  
 # - DB_PASSWORD
 # - JWT_SECRET
-# - CLOUDINARY_CLOUD_NAME (optional)
-# - CLOUDINARY_API_KEY (optional)
-# - CLOUDINARY_API_SECRET (optional)
+# - CLOUDINARY_CLOUD_NAME (required for file uploads)
+# - CLOUDINARY_API_KEY (required for file uploads)
+# - CLOUDINARY_API_SECRET (required for file uploads)
+# - GMAIL_USERNAME (for email notifications)
+# - GMAIL_APP_PASSWORD (for email notifications)
 
 services:
   - type: web
@@ -54,8 +56,22 @@ services:
       - key: LOGGING_LEVEL_COM_FYPIFY
         value: INFO
       
-      - key: LOGGING_LEVEL_COM_FYPIFY
-        value: INFO
+      # Cloudinary Configuration - Set in Render Dashboard for security
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false # Must be set manually in Render Dashboard
+      
+      - key: CLOUDINARY_API_KEY
+        sync: false # Must be set manually in Render Dashboard
+      
+      - key: CLOUDINARY_API_SECRET
+        sync: false # Must be set manually in Render Dashboard
+      
+      # Email Configuration - Set in Render Dashboard for security
+      - key: GMAIL_USERNAME
+        sync: false # Must be set manually in Render Dashboard
+      
+      - key: GMAIL_APP_PASSWORD
+        sync: false # Must be set manually in Render Dashboard
     
     # Health check endpoint
     healthCheckPath: /actuator/health

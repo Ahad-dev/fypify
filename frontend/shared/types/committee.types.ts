@@ -25,7 +25,7 @@ export interface DeadlineBatch {
 export interface ProjectDeadline {
   id: string;
   documentTypeId: string;
-  documentTypeName: string;
+  documentTypeTitle: string;
   documentTypeCode: string;
   deadlineDate: string;
   sortOrder: number;
