@@ -69,6 +69,12 @@
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 
+		<!-- Spring WebSocket for real-time notifications -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
+		</dependency>
+
 	<!-- PostgreSQL Driver -->
 	<dependency>
 		<groupId>org.postgresql</groupId>

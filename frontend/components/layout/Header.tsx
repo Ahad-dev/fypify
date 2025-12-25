@@ -8,7 +8,6 @@ import { gsap } from 'gsap';
 import {
   Menu,
   X,
-  Bell,
   ChevronDown,
   User,
   Settings,
@@ -32,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { NotificationPanel } from './NotificationPanel';
 import { cn } from '@/lib/utils';
 
 // Navigation items based on user role
@@ -127,14 +127,12 @@ const getNavigationItems = (isAdmin: boolean, isSupervisor: boolean, isStudent: 
 
 export function Header() {
   const pathname = usePathname();
-  const { user, logout, isAdmin, isSupervisor, isStudent } = useAuthContext();
+  const { user, logout, isAdmin, isSupervisor, isStudent, isFypCommittee } = useAuthContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
-  const bellRef = useRef<HTMLButtonElement>(null);
 
-  const isFypCommittee = user?.role === 'FYP_COMMITTEE';
   const navigationItems = getNavigationItems(isAdmin, isSupervisor, isStudent, isFypCommittee);
 
   // GSAP animations on mount
@@ -161,17 +159,7 @@ export function Header() {
     return () => ctx.revert();
   }, []);
 
-  // Bell icon hover animation
-  const handleBellHover = (isEntering: boolean) => {
-    if (bellRef.current) {
-      gsap.to(bellRef.current, {
-        rotation: isEntering ? 15 : 0,
-        scale: isEntering ? 1.1 : 1,
-        duration: 0.3,
-        ease: 'power2.out',
-      });
-    }
-  };
+
 
   const getInitials = (fullName?: string) => {
     if (!fullName) return 'U';
@@ -246,17 +234,7 @@ export function Header() {
         {/* Right side actions */}
         <div className="flex items-center gap-2">
           {/* Notifications */}
-          <Button 
-            ref={bellRef}
-            variant="ghost" 
-            size="icon" 
-            className="relative hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary transition-colors duration-200"
-            onMouseEnter={() => handleBellHover(true)}
-            onMouseLeave={() => handleBellHover(false)}
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full animate-pulse" />
-          </Button>
+          <NotificationPanel />
 
           {/* User Menu */}
           <DropdownMenu>

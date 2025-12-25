@@ -126,6 +126,9 @@ public class SecurityConfig {
                         // Swagger/OpenAPI
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         
+                        // WebSocket endpoint
+                        .requestMatchers("/ws/**").permitAll()
+                        
                         // All other endpoints require authentication
                         .anyRequest().authenticated()
                 )
