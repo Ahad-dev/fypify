@@ -17,7 +17,9 @@ import com.fypify.backend.modules.project.repository.ProjectRepository;
 import com.fypify.backend.modules.submission.dto.*;
 import com.fypify.backend.modules.submission.entity.DocumentSubmission;
 import com.fypify.backend.modules.submission.entity.SubmissionStatus;
+import com.fypify.backend.modules.submission.entity.SupervisorMarks;
 import com.fypify.backend.modules.submission.repository.DocumentSubmissionRepository;
+import com.fypify.backend.modules.submission.repository.SupervisorMarksRepository;
 import com.fypify.backend.modules.user.entity.Role;
 import com.fypify.backend.modules.user.entity.User;
 import com.fypify.backend.modules.user.repository.UserRepository;
@@ -73,6 +75,7 @@ import java.util.stream.Collectors;
 public class SubmissionService {
 
     private final DocumentSubmissionRepository submissionRepository;
+    private final SupervisorMarksRepository supervisorMarksRepository;
     private final ProjectRepository projectRepository;
     private final DocumentTypeRepository documentTypeRepository;
     private final ProjectDeadlineRepository deadlineRepository;
@@ -320,6 +323,10 @@ public class SubmissionService {
 
     /**
      * Supervisor reviews a submission (approve or request revision).
+     * 
+     * Deadline-aware logic:
+     * - Before deadline: Can approve or request revision
+     * - After deadline: Must approve with marks (revision not allowed)
      */
     @Transactional
     public SubmissionDto reviewSubmission(UUID submissionId, SupervisorReviewRequest request, User supervisor) {
@@ -338,16 +345,66 @@ public class SubmissionService {
 
         SubmissionStatus oldStatus = submission.getStatus();
 
+        // Get deadline to determine if we're past it
+        Instant deadline = getDeadlineForProjectAndDocType(project.getId(), submission.getDocumentType().getId());
+        boolean isAfterDeadline = deadline != null && Instant.now().isAfter(deadline);
+
         if (request.getApprove()) {
-            submission.approveBySupervsor();
-            log.info("Submission approved by supervisor: submissionId={}", submissionId);
+            if (isAfterDeadline) {
+                // After deadline: marks are required
+                if (request.getMarks() == null) {
+                    throw new BusinessRuleException("MARKS_REQUIRED", 
+                        "Marks are required when approving after deadline has passed");
+                }
+                
+                // Save supervisor marks
+                saveSupervisorMarks(submission, supervisor, request.getMarks(), request.getFeedback());
+                
+                // Lock for evaluation immediately after deadline
+                submission.lockForEvaluation();
+                submission.setIsFinal(true);
+                log.info("Submission approved and locked by supervisor after deadline: submissionId={}, marks={}", 
+                    submissionId, request.getMarks());
+                
+                // Notify group leader
+                notifyGroupLeader(project, NotificationType.SUBMISSION_LOCKED, 
+                    String.format("Your %s submission has been approved and locked for evaluation by the supervisor.", 
+                        submission.getDocumentType().getTitle()));
+            } else {
+                // Before deadline: normal approval, marks optional
+                submission.approveBySupervsor();
+                
+                // If marks provided, save them
+                if (request.getMarks() != null) {
+                    saveSupervisorMarks(submission, supervisor, request.getMarks(), request.getFeedback());
+                }
+                
+                log.info("Submission approved by supervisor: submissionId={}", submissionId);
+                
+                // Notify group leader
+                notifyGroupLeader(project, NotificationType.SUBMISSION_APPROVED, 
+                    String.format("Your %s submission has been approved by the supervisor.", 
+                        submission.getDocumentType().getTitle()));
+            }
         } else {
+            // Request revision
+            if (isAfterDeadline) {
+                // After deadline: cannot request revision, must approve with marks
+                throw new BusinessRuleException("CANNOT_REQUEST_REVISION", 
+                    "Cannot request revision after deadline has passed. You must approve and provide marks.");
+            }
+            
             if (request.getFeedback() == null || request.getFeedback().isBlank()) {
                 throw new BusinessRuleException("FEEDBACK_REQUIRED", "Feedback is required when requesting revision");
             }
             submission.requestRevision(request.getFeedback());
 
-            // Notify group members about revision request
+            // Notify group leader about revision request
+            notifyGroupLeader(project, NotificationType.SUBMISSION_REVISION_REQUESTED, 
+                String.format("Your %s submission requires revision. Feedback: %s", 
+                    submission.getDocumentType().getTitle(), request.getFeedback()));
+
+            // Notify group members about revision request via email
             List<String> memberEmails = project.getGroup().getMembers().stream()
                     .map(m -> m.getStudent().getEmail())
                     .filter(email -> email != null && !email.isBlank())
@@ -371,6 +428,48 @@ public class SubmissionService {
                 Map.of("status", submission.getStatus().name()));
 
         return toDto(submission);
+    }
+
+    /**
+     * Save supervisor marks for a submission.
+     */
+    private void saveSupervisorMarks(DocumentSubmission submission, User supervisor, Integer marks, String comments) {
+        // Check if marks already exist
+        SupervisorMarks existingMarks = supervisorMarksRepository.findBySubmissionId(submission.getId())
+                .orElse(null);
+        
+        if (existingMarks != null) {
+            // Update existing marks
+            existingMarks.setMarks(marks);
+            existingMarks.setPrivateComments(comments);
+            supervisorMarksRepository.save(existingMarks);
+            log.info("Updated supervisor marks for submission: submissionId={}, marks={}", submission.getId(), marks);
+        } else {
+            // Create new marks
+            SupervisorMarks supervisorMarks = SupervisorMarks.builder()
+                    .submission(submission)
+                    .supervisor(supervisor)
+                    .marks(marks)
+                    .privateComments(comments)
+                    .build();
+            supervisorMarksRepository.save(supervisorMarks);
+            log.info("Saved supervisor marks for submission: submissionId={}, marks={}", submission.getId(), marks);
+        }
+    }
+
+    /**
+     * Notify the group leader about submission status changes.
+     */
+    private void notifyGroupLeader(Project project, NotificationType type, String message) {
+        User leader = project.getGroup().getLeader();
+        if (leader != null) {
+            Map<String, Object> payload = Map.of(
+                    "title", "Submission Update",
+                    "message", message,
+                    "projectId", project.getId().toString()
+            );
+            notificationService.sendNotification(leader, type, payload);
+        }
     }
 
     /**
@@ -400,14 +499,18 @@ public class SubmissionService {
     // ==================== Auto-Lock After Deadline ====================
 
     /**
-     * Process deadlines that have passed and lock the most recent submissions.
-     * This should be called by a scheduled job.
+     * Auto-process and lock submissions after deadline has passed.
+     * Called by scheduler.
      * 
      * Workflow:
      * 1. Find all passed deadlines
      * 2. For each deadline, find projects with that deadline batch
      * 3. For each project, find the most recent submission for that doc type
-     * 4. Lock the submission and notify Evaluation Committee
+     * 4. Lock the submission based on its status:
+     *    - REVISION_REQUESTED: Mark as final (student didn't re-upload in time)
+     *    - PENDING_SUPERVISOR: Lock as-is (supervisor didn't review in time)
+     *    - APPROVED_BY_SUPERVISOR: Lock for evaluation
+     * 5. Notify Evaluation Committee and Group Leader
      */
     @Transactional
     public int processPassedDeadlines() {
@@ -429,12 +532,57 @@ public class SubmissionService {
 
                     // Only lock if not already locked/finalized
                     if (!submission.isLocked()) {
+                        // Handle different statuses appropriately
+                        SubmissionStatus oldStatus = submission.getStatus();
+                        String autoLockReason = null;
+
+                        if (oldStatus == SubmissionStatus.REVISION_REQUESTED) {
+                            // Student was asked for revision but didn't upload in time
+                            // Mark as final with the current version
+                            submission.setIsFinal(true);
+                            autoLockReason = "[AUTO-LOCKED] Deadline passed while awaiting revision. Previous submission marked as final.";
+                            
+                            // Add to comments
+                            String existingComments = submission.getComments() != null ? submission.getComments() + "\n\n" : "";
+                            submission.setComments(existingComments + autoLockReason);
+                            
+                            log.info("Auto-locking submission with REVISION_REQUESTED status after deadline: submissionId={}, projectId={}",
+                                    submission.getId(), project.getId());
+                            
+                            // Notify group leader about auto-lock
+                            notifyGroupLeader(project, NotificationType.SUBMISSION_LOCKED, 
+                                String.format("Your %s submission was automatically locked as the deadline passed while awaiting revision. The previous version has been marked as final for evaluation.",
+                                    deadline.getDocumentType().getTitle()));
+                                    
+                        } else if (oldStatus == SubmissionStatus.PENDING_SUPERVISOR) {
+                            // Supervisor didn't review in time
+                            submission.setIsFinal(true);
+                            autoLockReason = "[AUTO-LOCKED] Deadline passed while pending supervisor review.";
+                            
+                            String existingComments = submission.getComments() != null ? submission.getComments() + "\n\n" : "";
+                            submission.setComments(existingComments + autoLockReason);
+                            
+                            log.info("Auto-locking submission with PENDING_SUPERVISOR status after deadline: submissionId={}, projectId={}",
+                                    submission.getId(), project.getId());
+                            
+                            // Notify group leader
+                            notifyGroupLeader(project, NotificationType.SUBMISSION_LOCKED, 
+                                String.format("Your %s submission was automatically locked as the deadline passed. The submission is now ready for evaluation.",
+                                    deadline.getDocumentType().getTitle()));
+                                    
+                        } else if (oldStatus == SubmissionStatus.APPROVED_BY_SUPERVISOR) {
+                            // Already approved, just lock
+                            submission.setIsFinal(true);
+                            log.info("Auto-locking APPROVED submission after deadline: submissionId={}, projectId={}",
+                                    submission.getId(), project.getId());
+                        }
+
                         submission.lockForEvaluation();
                         submissionRepository.save(submission);
                         lockedCount++;
 
-                        log.info("Auto-locked submission after deadline: submissionId={}, projectId={}, docType={}",
-                                submission.getId(), project.getId(), deadline.getDocumentType().getCode());
+                        log.info("Auto-locked submission after deadline: submissionId={}, projectId={}, docType={}, previousStatus={}",
+                                submission.getId(), project.getId(), deadline.getDocumentType().getCode(), oldStatus);
 
                         // Notify Evaluation Committee
                         notifyEvaluationCommittee(submission, project, deadline.getDocumentType());
@@ -443,6 +591,11 @@ public class SubmissionService {
                     // No submission exists - could log warning or create placeholder
                     log.warn("No submission found for project {} and doc type {} after deadline",
                             project.getId(), deadline.getDocumentType().getCode());
+                    
+                    // Notify group leader that they missed the deadline
+                    notifyGroupLeader(project, NotificationType.DEADLINE_PASSED, 
+                        String.format("The deadline for %s has passed and no submission was received.",
+                            deadline.getDocumentType().getTitle()));
                 }
             }
         }
