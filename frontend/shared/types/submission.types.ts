@@ -79,7 +79,8 @@ export interface CreateSubmissionRequest {
 
 export interface SupervisorReviewRequest {
   approve: boolean;
-  comments: string;
+  feedback?: string;
+  marks?: number; // 0-100, required when approving after deadline
 }
 
 // ============ Document Type (from Admin) ============
