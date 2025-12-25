@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notificationService } from '@/shared/services';
 import { QUERY_KEYS } from '@/shared/constants/queryKeys';
 import { PaginationParams } from '@/shared/types/api.types';
+import { Notification } from '@/shared/types';
 import { toast } from 'sonner';
+import { useEffect, useRef } from 'react';
 
 // ============ Notification Queries ============
 
@@ -18,27 +20,94 @@ export function useNotifications(params?: PaginationParams) {
 }
 
 /**
- * Hook to get unread notifications
+ * Hook to get unread notifications with faster polling
  */
 export function useUnreadNotifications() {
   return useQuery({
     queryKey: QUERY_KEYS.notifications.unread(),
     queryFn: notificationService.getUnreadNotifications,
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000, // Poll every minute
+    staleTime: 15 * 1000,
+    refetchInterval: 30 * 1000, // Poll every 30 seconds for faster updates
   });
 }
 
 /**
- * Hook to get notification counts
+ * Hook to get notification counts with faster polling
  */
 export function useNotificationCounts() {
   return useQuery({
     queryKey: QUERY_KEYS.notifications.count(),
     queryFn: notificationService.getNotificationCounts,
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000, // Poll every minute
+    staleTime: 15 * 1000,
+    refetchInterval: 30 * 1000, // Poll every 30 seconds
   });
+}
+
+/**
+ * Hook to get notifications with toast alerts for new notifications.
+ * Shows a toast at bottom-left when a new notification arrives.
+ */
+export function useNotificationsWithToast() {
+  const queryClient = useQueryClient();
+  const previousCountRef = useRef<number | null>(null);
+  const previousNotificationIdsRef = useRef<Set<string>>(new Set());
+
+  const { data: counts, ...countQuery } = useNotificationCounts();
+  const { data: notificationsData, ...notificationQuery } = useUnreadNotifications();
+
+  // Safely extract array from response (handles both array and paginated response)
+  const notifications = Array.isArray(notificationsData) 
+    ? notificationsData 
+    : (notificationsData as any)?.content || [];
+
+  // Track new notifications and show toast
+  useEffect(() => {
+    if (!notifications || !Array.isArray(notifications) || notifications.length === 0) return;
+
+    const currentIds = new Set(notifications.map((n: Notification) => n.id));
+    
+    // Check for new notifications (IDs not seen before)
+    const newNotifications = notifications.filter(
+      (n: Notification) => !previousNotificationIdsRef.current.has(n.id)
+    );
+
+    // Only show toast if we had previous data (not on initial load)
+    if (previousNotificationIdsRef.current.size > 0 && newNotifications.length > 0) {
+      // Show toast for each new notification
+      newNotifications.forEach((notification: Notification) => {
+        toast(notification.title, {
+          description: notification.message,
+          position: 'bottom-left',
+          duration: 5000,
+          action: {
+            label: 'View',
+            onClick: () => {
+              // Navigate to notifications or mark as read
+              queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notifications.all });
+            },
+          },
+        });
+      });
+
+      // Also invalidate related queries to refresh status
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.submissions.all });
+    }
+
+    // Update previous IDs ref
+    previousNotificationIdsRef.current = currentIds;
+    previousCountRef.current = counts?.unread || 0;
+  }, [notifications, counts, queryClient]);
+
+  return {
+    counts,
+    notifications,
+    unreadCount: counts?.unread || 0,
+    isLoading: countQuery.isLoading || notificationQuery.isLoading,
+    refetch: () => {
+      countQuery.refetch();
+      notificationQuery.refetch();
+    },
+  };
 }
 
 // ============ Notification Mutations ============
@@ -98,3 +167,4 @@ export function useDeleteNotification() {
     },
   });
 }
+

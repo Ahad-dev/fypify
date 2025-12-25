@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 /**
  * Service for notification operations.
@@ -73,6 +74,7 @@ import java.util.stream.Collectors;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /**
      * Get all notifications for a user.
@@ -160,7 +162,11 @@ public class NotificationService {
         notification = notificationRepository.save(notification);
         log.info("Notification sent to user {}: type={}", recipient.getId(), type);
         
-        return toDto(notification);
+        // Push via WebSocket for real-time delivery
+        NotificationDto dto = toDto(notification);
+        pushToWebSocket(recipient.getId(), dto);
+        
+        return dto;
     }
 
     /**
@@ -189,6 +195,9 @@ public class NotificationService {
                     .isRead(false)
                     .build();
             notificationRepository.save(notification);
+            
+            // Push via WebSocket for real-time delivery
+            pushToWebSocket(recipient.getId(), toDto(notification));
         }
         log.info("Notification sent to {} users: type={}", recipients.size(), type);
     }
@@ -287,5 +296,23 @@ public class NotificationService {
         return name.replace("_", " ").toLowerCase()
                 .substring(0, 1).toUpperCase() + 
                 name.replace("_", " ").toLowerCase().substring(1);
+    }
+
+    /**
+     * Push notification to user via WebSocket for real-time delivery.
+     * Sends to user-specific queue: /user/{userId}/queue/notifications
+     */
+    private void pushToWebSocket(UUID userId, NotificationDto notification) {
+        try {
+            messagingTemplate.convertAndSendToUser(
+                userId.toString(),
+                "/queue/notifications",
+                notification
+            );
+            log.debug("WebSocket notification pushed to user {}", userId);
+        } catch (Exception e) {
+            // Don't fail the notification save if WebSocket push fails
+            log.warn("Failed to push notification via WebSocket to user {}: {}", userId, e.getMessage());
+        }
     }
 }

@@ -9,7 +9,7 @@ import { PaginatedResponse, PaginationParams } from '@/shared/types/api.types';
 const NOTIFICATION_ENDPOINTS = {
   NOTIFICATIONS: '/notifications',
   UNREAD: '/notifications/unread',
-  COUNTS: '/notifications/counts',
+  UNREAD_COUNT: '/notifications/unread/count',
   MARK_READ: '/notifications/mark-read',
   MARK_ALL_READ: '/notifications/mark-all-read',
 } as const;
@@ -41,13 +41,17 @@ export const notificationService = {
   },
 
   /**
-   * Get notification counts
+   * Get notification counts (unread count)
    */
   getNotificationCounts: async (): Promise<NotificationCounts> => {
-    const response = await api.get<ApiResponse<NotificationCounts>>(
-      NOTIFICATION_ENDPOINTS.COUNTS
+    const response = await api.get<ApiResponse<{ count: number }>>(
+      NOTIFICATION_ENDPOINTS.UNREAD_COUNT
     );
-    return response.data.data;
+    // Transform backend response { count: n } to NotificationCounts shape
+    return {
+      total: response.data.data.count,
+      unread: response.data.data.count,
+    };
   },
 
   /**
