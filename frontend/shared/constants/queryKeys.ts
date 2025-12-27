@@ -136,6 +136,11 @@ export const QUERY_KEYS = {
     detail: (id: string) => [...QUERY_KEYS.evaluations.details(), id] as const,
     rubrics: () => [...QUERY_KEYS.evaluations.all, 'rubrics'] as const,
     rubric: (id: string) => [...QUERY_KEYS.evaluations.rubrics(), id] as const,
+    // Evaluation Committee specific
+    locked: () => [...QUERY_KEYS.evaluations.all, 'locked'] as const,
+    marks: (submissionId: string) => [...QUERY_KEYS.evaluations.all, 'marks', submissionId] as const,
+    myEvaluation: (submissionId: string) => [...QUERY_KEYS.evaluations.all, 'my', submissionId] as const,
+    summary: (submissionId: string) => [...QUERY_KEYS.evaluations.all, 'summary', submissionId] as const,
   },
 
   // ============ NOTIFICATIONS ============

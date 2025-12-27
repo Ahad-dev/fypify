@@ -68,6 +68,7 @@ export interface DocumentSubmission {
   supervisorComments: string | null;
   isLateSubmission: boolean;
   deadline: string | null;
+  uploadedByName?: string;
 }
 
 // ============ Request DTOs ============
@@ -83,23 +84,11 @@ export interface SupervisorReviewRequest {
   marks?: number; // 0-100, required when approving after deadline
 }
 
-// ============ Document Type (from Admin) ============
+// Note: DocumentType is defined in admin.types.ts
+// Re-export here for convenience
+export type { DocumentType } from './admin.types';
 
-export interface DocumentType {
-  id: string;
-  title: string;
-  description: string | null;
-  isActive: boolean;
-  createdAt: string;
-}
-
-// ============ Deadline Info ============
-
-export interface ProjectDeadline {
-  id: string;
-  documentTypeId: string;
-  documentTypeTitle: string;
-  deadlineDate: string;
-  batchName: string;
-}
+// Note: ProjectDeadline is defined in committee.types.ts
+// Re-export here for convenience
+export type { ProjectDeadline } from './committee.types';
 

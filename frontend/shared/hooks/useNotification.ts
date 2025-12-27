@@ -47,6 +47,44 @@ export function useNotificationCounts() {
  * Hook to get notifications with toast alerts for new notifications.
  * Shows a toast at bottom-left when a new notification arrives.
  */
+/**
+ * Helper function to get notification title - falls back to payload if main field is null
+ */
+const getNotificationTitle = (notification: Notification): string => {
+  if (notification.title) return notification.title;
+  if (notification.payload?.title) return notification.payload.title;
+  if (notification.typeDisplay) return notification.typeDisplay;
+  const typeLabels: Record<string, string> = {
+    'PROJECT_REGISTERED': 'New Project Registration',
+    'PROJECT_APPROVED': 'Project Approved',
+    'PROJECT_REJECTED': 'Project Rejected',
+    'GROUP_INVITE': 'Group Invitation',
+    'GROUP_INVITE_RECEIVED': 'Group Invitation Received',
+  };
+  return typeLabels[notification.type] || 'Notification';
+};
+
+/**
+ * Helper function to get notification message - falls back to payload if main field is null
+ */
+const getNotificationMessage = (notification: Notification): string => {
+  if (notification.message) return notification.message;
+  if (notification.payload?.message) return notification.payload.message;
+  const { payload } = notification;
+  if (!payload) return 'You have a new notification';
+  
+  switch (notification.type) {
+    case 'PROJECT_REJECTED':
+      return payload.reason ? `Reason: ${payload.reason}` : 'Your project has been rejected';
+    case 'PROJECT_APPROVED':
+      return payload.project_title ? `Project "${payload.project_title}" approved` : 'Your project has been approved';
+    case 'PROJECT_REGISTERED':
+      return payload.project_title ? `Project "${payload.project_title}" pending approval` : 'A new project registered';
+    default:
+      return 'You have a new notification';
+  }
+};
+
 export function useNotificationsWithToast() {
   const queryClient = useQueryClient();
   const previousCountRef = useRef<number | null>(null);
@@ -75,14 +113,16 @@ export function useNotificationsWithToast() {
     if (previousNotificationIdsRef.current.size > 0 && newNotifications.length > 0) {
       // Show toast for each new notification
       newNotifications.forEach((notification: Notification) => {
-        toast(notification.title, {
-          description: notification.message,
+        const title = getNotificationTitle(notification);
+        const message = getNotificationMessage(notification);
+        
+        toast(title, {
+          description: message,
           position: 'bottom-left',
           duration: 5000,
           action: {
             label: 'View',
             onClick: () => {
-              // Navigate to notifications or mark as read
               queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notifications.all });
             },
           },

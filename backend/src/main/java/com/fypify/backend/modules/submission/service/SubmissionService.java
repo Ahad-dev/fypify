@@ -17,8 +17,10 @@ import com.fypify.backend.modules.project.repository.ProjectRepository;
 import com.fypify.backend.modules.submission.dto.*;
 import com.fypify.backend.modules.submission.entity.DocumentSubmission;
 import com.fypify.backend.modules.submission.entity.SubmissionStatus;
+import com.fypify.backend.modules.submission.entity.EvaluationMarks;
 import com.fypify.backend.modules.submission.entity.SupervisorMarks;
 import com.fypify.backend.modules.submission.repository.DocumentSubmissionRepository;
+import com.fypify.backend.modules.submission.repository.EvaluationMarksRepository;
 import com.fypify.backend.modules.submission.repository.SupervisorMarksRepository;
 import com.fypify.backend.modules.user.entity.Role;
 import com.fypify.backend.modules.user.entity.User;
@@ -76,6 +78,7 @@ public class SubmissionService {
 
     private final DocumentSubmissionRepository submissionRepository;
     private final SupervisorMarksRepository supervisorMarksRepository;
+    private final EvaluationMarksRepository evaluationMarksRepository;
     private final ProjectRepository projectRepository;
     private final DocumentTypeRepository documentTypeRepository;
     private final ProjectDeadlineRepository deadlineRepository;
@@ -698,6 +701,213 @@ public class SubmissionService {
             case EVAL_IN_PROGRESS -> "Evaluation in Progress";
             case EVAL_FINALIZED -> "Evaluation Finalized";
         };
+    }
+
+    // ==================== Evaluation Committee Operations ====================
+
+    /**
+     * Get submissions locked for evaluation.
+     */
+    public Page<SubmissionDto> getLockedSubmissions(Pageable pageable) {
+        Page<DocumentSubmission> submissions = submissionRepository.findByStatus(
+            SubmissionStatus.LOCKED_FOR_EVAL, pageable);
+        
+        // Also include EVAL_IN_PROGRESS submissions
+        Page<DocumentSubmission> inProgress = submissionRepository.findByStatus(
+            SubmissionStatus.EVAL_IN_PROGRESS, pageable);
+        
+        return submissions.map(this::toDto);
+    }
+
+    /**
+     * Get all evaluation marks for a submission.
+     */
+    public List<EvaluationMarksDto> getEvaluationMarks(UUID submissionId) {
+        List<EvaluationMarks> marks = evaluationMarksRepository.findBySubmissionId(submissionId);
+        return marks.stream()
+                .map(this::toEvaluationMarksDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get evaluation by a specific evaluator.
+     */
+    public EvaluationMarksDto getEvaluationByEvaluator(UUID submissionId, UUID evaluatorId) {
+        return evaluationMarksRepository.findBySubmissionIdAndEvaluatorId(submissionId, evaluatorId)
+                .map(this::toEvaluationMarksDto)
+                .orElse(null);
+    }
+
+    /**
+     * Submit or update evaluation marks for a submission.
+     */
+    @Transactional
+    public EvaluationMarksDto evaluateSubmission(UUID submissionId, EvaluationRequest request, User evaluator) {
+        // Validate submission
+        DocumentSubmission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
+
+        // Validate submission status
+        if (submission.getStatus() != SubmissionStatus.LOCKED_FOR_EVAL && 
+            submission.getStatus() != SubmissionStatus.EVAL_IN_PROGRESS) {
+            throw new BusinessRuleException("INVALID_SUBMISSION_STATUS", 
+                "Submission must be locked for evaluation. Current status: " + submission.getStatus());
+        }
+
+        // Find or create evaluation marks
+        EvaluationMarks marks = evaluationMarksRepository
+                .findBySubmissionIdAndEvaluatorId(submissionId, evaluator.getId())
+                .orElseGet(() -> EvaluationMarks.builder()
+                        .submission(submission)
+                        .evaluator(evaluator)
+                        .isFinal(false)
+                        .build());
+
+        // Check if already finalized
+        if (marks.getIsFinal()) {
+            throw new BusinessRuleException("EVALUATION_FINALIZED", 
+                "Cannot modify finalized evaluation");
+        }
+
+        // Update marks
+        marks.setScore(request.getScore());
+        marks.setComments(request.getComments());
+
+        // Finalize if requested
+        if (Boolean.TRUE.equals(request.getIsFinal())) {
+            marks.finalize();
+            sendEvaluationFinalizedNotification(submission, evaluator);
+        }
+
+        marks = evaluationMarksRepository.save(marks);
+
+        // Update submission status if this is first evaluation
+        if (submission.getStatus() == SubmissionStatus.LOCKED_FOR_EVAL) {
+            submission.startEvaluation();
+            submissionRepository.save(submission);
+        }
+
+        log.info("Evaluation marks saved for submission {} by evaluator {}: score={}, isFinal={}",
+                submissionId, evaluator.getId(), request.getScore(), marks.getIsFinal());
+
+        return toEvaluationMarksDto(marks);
+    }
+
+    /**
+     * Finalize evaluation marks for a submission.
+     */
+    @Transactional
+    public EvaluationMarksDto finalizeEvaluation(UUID submissionId, User evaluator) {
+        EvaluationMarks marks = evaluationMarksRepository
+                .findBySubmissionIdAndEvaluatorId(submissionId, evaluator.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("EvaluationMarks", 
+                    "submissionId and evaluatorId", submissionId + "/" + evaluator.getId()));
+
+        if (marks.getIsFinal()) {
+            throw new BusinessRuleException("ALREADY_FINALIZED", 
+                "Evaluation is already finalized");
+        }
+
+        marks.finalize();
+        marks = evaluationMarksRepository.save(marks);
+
+        // Send notification
+        DocumentSubmission submission = marks.getSubmission();
+        sendEvaluationFinalizedNotification(submission, evaluator);
+
+        // Check if all evaluations are finalized
+        checkAndFinalizeSubmission(submissionId);
+
+        log.info("Evaluation finalized for submission {} by evaluator {}", 
+                submissionId, evaluator.getId());
+
+        return toEvaluationMarksDto(marks);
+    }
+
+    /**
+     * Get evaluation summary for a submission.
+     */
+    public EvaluationSummaryDto getEvaluationSummary(UUID submissionId) {
+        DocumentSubmission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
+
+        List<EvaluationMarks> allMarks = evaluationMarksRepository.findBySubmissionId(submissionId);
+        List<EvaluationMarksDto> markDtos = allMarks.stream()
+                .map(this::toEvaluationMarksDto)
+                .collect(Collectors.toList());
+
+        long finalizedCount = allMarks.stream().filter(EvaluationMarks::getIsFinal).count();
+        
+        Double avgScore = evaluationMarksRepository.calculateAverageScoreBySubmissionId(submissionId)
+                .orElse(null);
+
+        return EvaluationSummaryDto.builder()
+                .submissionId(submissionId)
+                .submissionStatus(submission.getStatus().name())
+                .totalEvaluations(allMarks.size())
+                .finalizedEvaluations((int) finalizedCount)
+                .averageScore(avgScore != null ? java.math.BigDecimal.valueOf(avgScore) : null)
+                .evaluations(markDtos)
+                .allFinalized(!allMarks.isEmpty() && finalizedCount == allMarks.size())
+                .build();
+    }
+
+    /**
+     * Check if all evaluations are finalized and update submission status.
+     */
+    private void checkAndFinalizeSubmission(UUID submissionId) {
+        long total = evaluationMarksRepository.countBySubmissionId(submissionId);
+        long finalized = evaluationMarksRepository.countFinalizedBySubmissionId(submissionId);
+        
+        // Finalize submission if at least one evaluator has finalized
+        // (Alternative: require all evaluators to finalize)
+        if (total > 0 && finalized == total) {
+            DocumentSubmission submission = submissionRepository.findById(submissionId).orElse(null);
+            if (submission != null && submission.getStatus() == SubmissionStatus.EVAL_IN_PROGRESS) {
+                submission.finalizeEvaluation();
+                submissionRepository.save(submission);
+                log.info("All evaluations finalized for submission {}, status updated to EVAL_FINALIZED", 
+                        submissionId);
+            }
+        }
+    }
+
+    /**
+     * Send evaluation finalized notification.
+     */
+    private void sendEvaluationFinalizedNotification(DocumentSubmission submission, User evaluator) {
+        // Notify FYP Committee members
+        List<User> fypCommittee = userRepository.findByRoleName("FYP_COMMITTEE");
+        for (User member : fypCommittee) {
+            notificationService.sendNotification(member, 
+                com.fypify.backend.modules.notification.entity.NotificationType.EVALUATION_FINALIZED,
+                Map.of(
+                    "submission_id", submission.getId().toString(),
+                    "project_id", submission.getProject().getId().toString(),
+                    "project_title", submission.getProject().getTitle(),
+                    "evaluator_name", evaluator.getFullName(),
+                    "title", "Evaluation Finalized",
+                    "message", String.format("%s has finalized their evaluation for '%s'", 
+                            evaluator.getFullName(), submission.getProject().getTitle())
+                )
+            );
+        }
+    }
+
+    /**
+     * Convert EvaluationMarks entity to DTO.
+     */
+    private EvaluationMarksDto toEvaluationMarksDto(EvaluationMarks marks) {
+        return EvaluationMarksDto.builder()
+                .id(marks.getId())
+                .submissionId(marks.getSubmission() != null ? marks.getSubmission().getId() : null)
+                .evaluatorId(marks.getEvaluator() != null ? marks.getEvaluator().getId() : null)
+                .evaluatorName(marks.getEvaluator() != null ? marks.getEvaluator().getFullName() : null)
+                .score(marks.getScore())
+                .comments(marks.getComments())
+                .isFinal(marks.getIsFinal())
+                .createdAt(marks.getCreatedAt())
+                .build();
     }
 }
 

@@ -16,6 +16,53 @@ import {
 import { cn } from '@/lib/utils';
 
 /**
+ * Helper function to get notification title - falls back to payload if main field is null
+ */
+const getNotificationTitle = (notification: Notification): string => {
+  if (notification.title) return notification.title;
+  if (notification.payload?.title) return notification.payload.title;
+  if (notification.typeDisplay) return notification.typeDisplay;
+  // Generate title from type
+  const typeLabels: Record<string, string> = {
+    'PROJECT_REGISTERED': 'New Project Registration',
+    'PROJECT_APPROVED': 'Project Approved',
+    'PROJECT_REJECTED': 'Project Rejected',
+    'GROUP_INVITE': 'Group Invitation',
+    'GROUP_INVITE_RECEIVED': 'Group Invitation Received',
+    'GROUP_INVITE_ACCEPTED': 'Invitation Accepted',
+    'GROUP_INVITE_DECLINED': 'Invitation Declined',
+    'SUPERVISOR_ASSIGNED': 'Supervisor Assigned',
+    'SUBMISSION_REMINDER': 'Submission Reminder',
+  };
+  return typeLabels[notification.type] || 'Notification';
+};
+
+/**
+ * Helper function to get notification message - falls back to payload if main field is null
+ */
+const getNotificationMessage = (notification: Notification): string => {
+  if (notification.message) return notification.message;
+  if (notification.payload?.message) return notification.payload.message;
+  // Generate message from payload data
+  const { payload } = notification;
+  if (!payload) return 'You have a new notification';
+  
+  switch (notification.type) {
+    case 'PROJECT_REJECTED':
+      return payload.reason ? `Reason: ${payload.reason}` : 'Your project has been rejected';
+    case 'PROJECT_APPROVED':
+      return payload.project_title ? `Project "${payload.project_title}" has been approved` : 'Your project has been approved';
+    case 'PROJECT_REGISTERED':
+      return payload.project_title ? `Project "${payload.project_title}" is pending approval` : 'A new project has been registered';
+    case 'GROUP_INVITE':
+    case 'GROUP_INVITE_RECEIVED':
+      return payload.inviter_name ? `${payload.inviter_name} invited you to join ${payload.group_name || 'a group'}` : 'You have been invited to a group';
+    default:
+      return 'You have a new notification';
+  }
+};
+
+/**
  * NotificationPanel Component
  * Shows a bell icon with unread count badge and dropdown with notifications
  */
@@ -50,6 +97,7 @@ export function NotificationPanel() {
       case 'PROJECT_REJECTED':
         return <X className="h-4 w-4 text-destructive" />;
       case 'GROUP_INVITE':
+      case 'GROUP_INVITE_RECEIVED':
         return <Bell className="h-4 w-4 text-primary" />;
       default:
         return <Bell className="h-4 w-4 text-muted-foreground" />;
@@ -116,10 +164,10 @@ export function NotificationPanel() {
                   </div>
                   <div className="flex-1 min-w-0 overflow-hidden">
                     <p className="text-sm font-medium text-foreground truncate">
-                      {notification.title}
+                      {getNotificationTitle(notification)}
                     </p>
                     <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                      {notification.message}
+                      {getNotificationMessage(notification)}
                     </p>
                     <div className="flex items-center justify-between mt-2">
                       <p className="text-xs text-muted-foreground">
