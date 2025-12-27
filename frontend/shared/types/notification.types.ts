@@ -10,6 +10,7 @@ export type NotificationType =
   | 'PROJECT_APPROVED'
   | 'PROJECT_REJECTED'
   | 'GROUP_INVITE'
+  | 'GROUP_INVITE_RECEIVED'
   | 'GROUP_INVITE_ACCEPTED'
   | 'GROUP_INVITE_DECLINED'
   | 'SUPERVISOR_ASSIGNED'
@@ -22,16 +23,31 @@ export type NotificationType =
 
 // ============ Notification ============
 
+export interface NotificationPayload {
+  title?: string;
+  message?: string;
+  project_id?: string;
+  project_title?: string;
+  group_id?: string;
+  group_name?: string;
+  reason?: string;
+  inviter_name?: string;
+  supervisor_name?: string;
+  [key: string]: any;
+}
+
 export interface Notification {
   id: string;
   userId: string;
   type: NotificationType;
-  title: string;
-  message: string;
-  relatedEntityType: string | null;
-  relatedEntityId: string | null;
+  typeDisplay?: string;
+  title: string | null;
+  message: string | null;
+  payload?: NotificationPayload;
+  relatedEntityType?: string | null;
+  relatedEntityId?: string | null;
   isRead: boolean;
-  readAt: string | null;
+  readAt?: string | null;
   createdAt: string;
 }
 
