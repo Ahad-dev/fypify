@@ -2,6 +2,7 @@ package com.fypify.backend.modules.committee.controller;
 
 import com.fypify.backend.common.response.ApiResponse;
 import com.fypify.backend.modules.committee.dto.*;
+import com.fypify.backend.modules.committee.service.FinalResultService;
 import com.fypify.backend.modules.committee.service.FypCommitteeService;
 import com.fypify.backend.modules.project.dto.ProjectDto;
 import com.fypify.backend.modules.user.entity.User;
@@ -23,7 +24,7 @@ import java.util.UUID;
 
 /**
  * REST Controller for FYP Committee operations.
- * Handles project approval/rejection and deadline management.
+ * Handles project approval/rejection, deadline management, and final results.
  */
 @RestController
 @RequestMapping("/api/v1/committee/fyp")
@@ -32,6 +33,7 @@ import java.util.UUID;
 public class FypCommitteeController {
 
     private final FypCommitteeService fypCommitteeService;
+    private final FinalResultService finalResultService;
     private final UserService userService;
 
     // ==================== Project Endpoints ====================
@@ -120,5 +122,41 @@ public class FypCommitteeController {
         User currentUser = userService.getByEmail(userDetails.getUsername());
         fypCommitteeService.deactivateBatch(id, currentUser);
         return ResponseEntity.ok(ApiResponse.success(null, "Deadline batch deactivated"));
+    }
+
+    // ==================== Final Result Endpoints ====================
+
+    @PostMapping("/projects/{projectId}/compute-final")
+    @PreAuthorize("hasAnyRole('FYP_COMMITTEE', 'ADMIN')")
+    @Operation(summary = "Compute final result", description = "Compute final weighted result for a project")
+    public ResponseEntity<ApiResponse<FinalResultDto>> computeFinalResult(
+            @PathVariable UUID projectId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = userService.getByEmail(userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(
+            finalResultService.computeFinalResult(projectId, currentUser),
+            "Final result computed successfully"
+        ));
+    }
+
+    @PatchMapping("/projects/{projectId}/release-final")
+    @PreAuthorize("hasAnyRole('FYP_COMMITTEE', 'ADMIN')")
+    @Operation(summary = "Release final result", description = "Release final result to students")
+    public ResponseEntity<ApiResponse<FinalResultDto>> releaseFinalResult(
+            @PathVariable UUID projectId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = userService.getByEmail(userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(
+            finalResultService.releaseFinalResult(projectId, currentUser),
+            "Final result released to students"
+        ));
+    }
+
+    @GetMapping("/projects/{projectId}/result")
+    @PreAuthorize("hasAnyRole('FYP_COMMITTEE', 'ADMIN')")
+    @Operation(summary = "Get final result", description = "Get computed final result for a project")
+    public ResponseEntity<ApiResponse<FinalResultDto>> getFinalResult(
+            @PathVariable UUID projectId) {
+        return ResponseEntity.ok(ApiResponse.success(finalResultService.getFinalResult(projectId)));
     }
 }
