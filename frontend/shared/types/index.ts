@@ -21,3 +21,9 @@ export * from './committee.types';
 
 // Submission types
 export * from './submission.types';
+
+// Evaluation types
+export * from './evaluation.types';
+
+// Result types
+export * from './result.types';

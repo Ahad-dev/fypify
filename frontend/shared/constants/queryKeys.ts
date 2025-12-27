@@ -194,6 +194,11 @@ export const QUERY_KEYS = {
     },
     // Supervisors
     supervisors: () => [...QUERY_KEYS.committee.all, 'supervisors'] as const,
+    // Final Results
+    finalResults: {
+      all: () => [...QUERY_KEYS.committee.all, 'finalResults'] as const,
+      byProject: (projectId: string) => [...QUERY_KEYS.committee.all, 'finalResults', projectId] as const,
+    },
   },
 
   // ============ FILES ============

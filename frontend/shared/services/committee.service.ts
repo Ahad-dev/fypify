@@ -5,6 +5,7 @@ import {
   RejectProjectRequest,
   CreateDeadlineBatchRequest,
   SupervisorOption,
+  FinalResult,
 } from '@/shared/types';
 import { Project } from '@/shared/types/project.types';
 import { PaginatedResponse, PaginationParams } from '@/shared/types/api.types';
@@ -23,6 +24,11 @@ const COMMITTEE_ENDPOINTS = {
   
   // Supervisors
   SUPERVISORS: '/users/supervisors',
+
+  // Final Results
+  COMPUTE_FINAL: (projectId: string) => `/committee/fyp/projects/${projectId}/compute-final`,
+  RELEASE_FINAL: (projectId: string) => `/committee/fyp/projects/${projectId}/release-final`,
+  GET_RESULT: (projectId: string) => `/committee/fyp/projects/${projectId}/result`,
 } as const;
 
 /**
@@ -140,4 +146,44 @@ export const committeeService = {
     );
     return response.data.data;
   },
+
+  // ============ Final Results ============
+
+  /**
+   * Compute final result for a project
+   */
+  computeFinalResult: async (projectId: string): Promise<FinalResult> => {
+    const response = await api.post<ApiResponse<FinalResult>>(
+      COMMITTEE_ENDPOINTS.COMPUTE_FINAL(projectId)
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Release final result to students
+   */
+  releaseFinalResult: async (projectId: string): Promise<FinalResult> => {
+    const response = await api.patch<ApiResponse<FinalResult>>(
+      COMMITTEE_ENDPOINTS.RELEASE_FINAL(projectId)
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Get computed final result for a project
+   */
+  getFinalResult: async (projectId: string): Promise<FinalResult | null> => {
+    try {
+      const response = await api.get<ApiResponse<FinalResult>>(
+        COMMITTEE_ENDPOINTS.GET_RESULT(projectId)
+      );
+      return response.data.data;
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
 };
+
