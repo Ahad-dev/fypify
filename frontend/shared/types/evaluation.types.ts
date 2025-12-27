@@ -22,7 +22,6 @@ export interface EvaluationMarks {
   comments?: string;
   isFinal: boolean;
   createdAt: string;
-  updatedAt: string;
 }
 
 // ============ Evaluation Summary ============

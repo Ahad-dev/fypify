@@ -42,12 +42,14 @@ export const evaluationService = {
 
   /**
    * Get my evaluation for a submission
+   * Returns null if no evaluation exists yet
    */
   getMyEvaluation: async (submissionId: string): Promise<EvaluationMarks | null> => {
-    const response = await api.get<ApiResponse<EvaluationMarks>>(
+    const response = await api.get<ApiResponse<EvaluationMarks | null>>(
       `${EVAL_ENDPOINTS.SUBMISSIONS}/${submissionId}/my-evaluation`
     );
-    return response.data.data;
+    // Explicitly return null if data is null/undefined to avoid React Query error
+    return response.data.data ?? null;
   },
 
   /**

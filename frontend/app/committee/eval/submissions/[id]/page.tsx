@@ -142,7 +142,7 @@ export default function EvaluateSubmissionPage() {
                   <div className="flex items-center gap-6 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <User className="h-4 w-4" />
-                      {submission.uploadedBy.fullName}
+                      {submission.uploadedByName}
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />

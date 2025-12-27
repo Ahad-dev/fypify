@@ -23,5 +23,4 @@ public class EvaluationMarksDto {
     private String comments;
     private Boolean isFinal;
     private Instant createdAt;
-    private Instant updatedAt;
 }

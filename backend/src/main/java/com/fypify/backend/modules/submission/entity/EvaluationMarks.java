@@ -69,25 +69,21 @@ public class EvaluationMarks {
     private Boolean isFinal = false;
 
     /**
-     * When the marks were created/last updated.
+     * When the marks were created.
      */
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
-
-    @Column(name = "updated_at")
-    private Instant updatedAt;
 
     /**
      * Validate score is in valid range.
      */
     @PrePersist
     @PreUpdate
-    public void validateAndUpdateTimestamp() {
+    public void validateScore() {
         if (score.compareTo(BigDecimal.ZERO) < 0 || score.compareTo(BigDecimal.valueOf(100)) > 0) {
             throw new IllegalStateException("Score must be between 0 and 100");
         }
-        this.updatedAt = Instant.now();
     }
 
     /**

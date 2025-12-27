@@ -68,6 +68,7 @@ export interface DocumentSubmission {
   supervisorComments: string | null;
   isLateSubmission: boolean;
   deadline: string | null;
+  uploadedByName?: string;
 }
 
 // ============ Request DTOs ============

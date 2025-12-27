@@ -907,7 +907,6 @@ public class SubmissionService {
                 .comments(marks.getComments())
                 .isFinal(marks.getIsFinal())
                 .createdAt(marks.getCreatedAt())
-                .updatedAt(marks.getUpdatedAt())
                 .build();
     }
 }
