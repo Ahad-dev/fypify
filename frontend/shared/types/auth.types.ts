@@ -49,13 +49,13 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
-// Reset password request
-export interface ResetPasswordRequest {
+// Forgot password request (request reset link)
+export interface ForgotPasswordRequest {
   email: string;
 }
 
-// Confirm reset password
-export interface ConfirmResetPasswordRequest {
+// Reset password request (with token from email)
+export interface ResetPasswordRequest {
   token: string;
   newPassword: string;
   confirmPassword: string;

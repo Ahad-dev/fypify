@@ -98,4 +98,32 @@ public class AuthController {
         // This endpoint is for API consistency and future token blacklist implementation
         return ResponseEntity.ok(ApiResponse.success("Logged out successfully"));
     }
+
+    /**
+     * Forgot password endpoint - request password reset link.
+     * POST /api/v1/auth/forgot-password
+     */
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Forgot password", description = "Request password reset email")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request
+    ) {
+        authService.forgotPassword(request);
+        // Always return success to prevent email enumeration
+        return ResponseEntity.ok(ApiResponse.success("If the email exists, a password reset link has been sent"));
+    }
+
+    /**
+     * Reset password endpoint - reset password with token.
+     * POST /api/v1/auth/reset-password
+     */
+    @PostMapping("/reset-password")
+    @Operation(summary = "Reset password", description = "Reset password using token from email")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request
+    ) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.success("Password has been reset successfully"));
+    }
 }
+

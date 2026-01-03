@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
   const onSubmit = async (data: ForgotPasswordFormData) => {
     setIsLoading(true);
     try {
-      await authService.resetPassword({ email: data.email });
+      await authService.forgotPassword({ email: data.email });
       setIsEmailSent(true);
     } catch (error) {
       toast.error('Failed to send reset email. Please try again.');

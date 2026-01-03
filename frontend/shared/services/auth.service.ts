@@ -5,8 +5,8 @@ import {
   AuthResponse,
   User,
   ChangePasswordRequest,
+  ForgotPasswordRequest,
   ResetPasswordRequest,
-  ConfirmResetPasswordRequest,
   UpdateProfileRequest,
 } from '@/shared/types';
 
@@ -17,8 +17,8 @@ const AUTH_ENDPOINTS = {
   ME: '/auth/me',
   REFRESH: '/auth/refresh',
   CHANGE_PASSWORD: '/auth/change-password',
+  FORGOT_PASSWORD: '/auth/forgot-password',
   RESET_PASSWORD: '/auth/reset-password',
-  CONFIRM_RESET: '/auth/confirm-reset',
   UPDATE_PROFILE: '/auth/profile',
 } as const;
 
@@ -116,17 +116,17 @@ export const authService = {
   },
 
   /**
-   * Request password reset
+   * Request password reset - sends email with reset link
    */
-  resetPassword: async (data: ResetPasswordRequest): Promise<void> => {
-    await api.post(AUTH_ENDPOINTS.RESET_PASSWORD, data);
+  forgotPassword: async (data: ForgotPasswordRequest): Promise<void> => {
+    await api.post(AUTH_ENDPOINTS.FORGOT_PASSWORD, data);
   },
 
   /**
-   * Confirm password reset with token
+   * Reset password using token from email
    */
-  confirmResetPassword: async (data: ConfirmResetPasswordRequest): Promise<void> => {
-    await api.post(AUTH_ENDPOINTS.CONFIRM_RESET, data);
+  resetPassword: async (data: ResetPasswordRequest): Promise<void> => {
+    await api.post(AUTH_ENDPOINTS.RESET_PASSWORD, data);
   },
 
   /**
