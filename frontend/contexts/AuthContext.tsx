@@ -30,6 +30,7 @@ interface AuthContextType extends AuthState {
   isSupervisor: boolean;
   isStudent: boolean;
   isFypCommittee: boolean;
+  isEvalCommittee: boolean;
 }
 
 // Create context with default values
@@ -209,6 +210,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const isSupervisor = user?.role === 'SUPERVISOR' || isAdmin;
   const isStudent = user?.role === 'STUDENT';
   const isFypCommittee = user?.role === 'FYP_COMMITTEE';
+  const isEvalCommittee = user?.role === 'EVALUATION_COMMITTEE';
 
   // Memoized context value
   const value = useMemo<AuthContextType>(
@@ -225,6 +227,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isSupervisor,
       isStudent,
       isFypCommittee,
+      isEvalCommittee,
     }),
     [
       user,
@@ -239,6 +242,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isSupervisor,
       isStudent,
       isFypCommittee,
+      isEvalCommittee,
     ]
   );
 

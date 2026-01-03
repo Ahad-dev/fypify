@@ -21,9 +21,19 @@ public interface SupervisorMarksRepository extends JpaRepository<SupervisorMarks
     Optional<SupervisorMarks> findBySubmissionId(UUID submissionId);
 
     /**
+     * Find marks by submission ID and supervisor ID.
+     */
+    Optional<SupervisorMarks> findBySubmissionIdAndSupervisorId(UUID submissionId, UUID supervisorId);
+
+    /**
      * Check if marks exist for a submission.
      */
     boolean existsBySubmissionId(UUID submissionId);
+
+    /**
+     * Check if marks exist for a submission by a specific supervisor.
+     */
+    boolean existsBySubmissionIdAndSupervisorId(UUID submissionId, UUID supervisorId);
 
     /**
      * Find marks by submission with submission details loaded.

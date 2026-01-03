@@ -15,6 +15,8 @@ const PROJECT_ENDPOINTS = {
   PENDING: '/projects/pending',
   BY_STATUS: '/projects/status',
   STATS: '/projects/stats',
+  MY_PROJECT: '/projects/my-project',
+  MY_SUPERVISED: '/projects/my-supervised',
 } as const;
 
 /**
@@ -79,12 +81,13 @@ export const projectService = {
   },
 
   /**
-   * Get project for a group
+   * Get project for a group (uses my-project endpoint which finds project by current user's group)
+   * Note: This ignores the groupId parameter and uses auth context
    */
   getProjectByGroupId: async (groupId: string): Promise<Project | null> => {
     try {
       const response = await api.get<ApiResponse<Project>>(
-        `${PROJECT_ENDPOINTS.PROJECTS}/groups/${groupId}`
+        PROJECT_ENDPOINTS.MY_PROJECT
       );
       return response.data.data;
     } catch (error: any) {
@@ -167,6 +170,17 @@ export const projectService = {
       { params: { limit: 1000 } } // assuming a large limit to get all supervisors
     );
     return response.data.data;  
+  },
+
+  /**
+   * Get projects supervised by the current user (for supervisors)
+   */
+  getMySupervisedProjects: async (params?: PaginationParams): Promise<PaginatedResponse<Project>> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<Project>>>(
+      PROJECT_ENDPOINTS.MY_SUPERVISED,
+      { params }
+    );
+    return response.data.data;
   },
 
 };

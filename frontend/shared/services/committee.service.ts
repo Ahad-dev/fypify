@@ -177,7 +177,8 @@ export const committeeService = {
       const response = await api.get<ApiResponse<FinalResult>>(
         COMMITTEE_ENDPOINTS.GET_RESULT(projectId)
       );
-      return response.data.data;
+      // Ensure we return null instead of undefined for React Query
+      return response.data.data ?? null;
     } catch (error: any) {
       if (error?.response?.status === 404) {
         return null;

@@ -50,6 +50,21 @@ public class EvaluationController {
     }
 
     /**
+     * Get submissions that the current evaluator hasn't evaluated yet.
+     * GET /api/v1/eval/pending
+     */
+    @GetMapping("/pending")
+    @PreAuthorize("hasRole('EVALUATION_COMMITTEE')")
+    @Operation(summary = "Get pending submissions", description = "Get submissions the evaluator hasn't evaluated yet")
+    public ResponseEntity<ApiResponse<List<SubmissionDto>>> getPendingSubmissions(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        User evaluator = userService.getByEmail(userDetails.getUsername());
+        List<SubmissionDto> submissions = submissionService.getPendingSubmissionsForEvaluator(evaluator.getId());
+        return ResponseEntity.ok(ApiResponse.success(submissions));
+    }
+
+    /**
      * Get all evaluation marks for a submission.
      * GET /api/v1/eval/submissions/{id}/marks
      */
@@ -120,12 +135,29 @@ public class EvaluationController {
      * GET /api/v1/eval/submissions/{id}/summary
      */
     @GetMapping("/submissions/{id}/summary")
-    @PreAuthorize("hasRole('EVALUATION_COMMITTEE')")
+    @PreAuthorize("hasAnyRole('EVALUATION_COMMITTEE', 'FYP_COMMITTEE', 'ADMIN')")
     @Operation(summary = "Get evaluation summary", description = "Get summary of all evaluations including averages")
     public ResponseEntity<ApiResponse<EvaluationSummaryDto>> getEvaluationSummary(
             @PathVariable UUID id
     ) {
         EvaluationSummaryDto summary = submissionService.getEvaluationSummary(id);
         return ResponseEntity.ok(ApiResponse.success(summary));
+    }
+
+    /**
+     * Get all evaluations made by the current user.
+     * GET /api/v1/eval/my-evaluations
+     * Optional query param: isFinal (true/false) to filter by status
+     */
+    @GetMapping("/my-evaluations")
+    @PreAuthorize("hasRole('EVALUATION_COMMITTEE')")
+    @Operation(summary = "Get my evaluations", description = "Get all evaluations made by the current user")
+    public ResponseEntity<ApiResponse<List<MyEvaluationDto>>> getMyEvaluations(
+            @RequestParam(required = false) Boolean isFinal,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        User evaluator = userService.getByEmail(userDetails.getUsername());
+        List<MyEvaluationDto> evaluations = submissionService.getMyEvaluations(evaluator.getId(), isFinal);
+        return ResponseEntity.ok(ApiResponse.success(evaluations));
     }
 }

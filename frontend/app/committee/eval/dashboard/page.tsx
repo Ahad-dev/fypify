@@ -14,7 +14,7 @@ import {
   ListChecks,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useLockedSubmissions } from '@/shared/hooks/useEvaluation';
+import { useLockedSubmissions, useMyEvaluations } from '@/shared/hooks/useEvaluation';
 
 const evalModules = [
   {
@@ -31,15 +31,18 @@ const evalModules = [
     icon: ListChecks,
     href: '/committee/eval/my-evaluations',
     color: 'from-blue-500 to-blue-600',
-    stats: 'Coming soon',
-    disabled: true,
+    stats: 'View drafts & finalized',
   },
 ];
 
 export default function EvalDashboardPage() {
   const { data: lockedData, isLoading } = useLockedSubmissions(0, 100);
+  const { data: drafts, isLoading: draftsLoading } = useMyEvaluations(false);
+  const { data: finalized, isLoading: finalizedLoading } = useMyEvaluations(true);
 
   const pendingCount = lockedData?.totalElements ?? 0;
+  const draftsCount = drafts?.length ?? 0;
+  const finalizedCount = finalized?.length ?? 0;
 
   return (
     <RoleGuard allowedRoles={['EVALUATION_COMMITTEE', 'ADMIN']}>
@@ -91,7 +94,9 @@ export default function EvalDashboardPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">My Finalized</p>
-                    <p className="text-2xl font-bold">-</p>
+                    <div className="text-2xl font-bold">
+                      {finalizedLoading ? <Skeleton className="h-8 w-12" /> : finalizedCount}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -104,7 +109,9 @@ export default function EvalDashboardPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">My Drafts</p>
-                    <p className="text-2xl font-bold">-</p>
+                    <div className="text-2xl font-bold">
+                      {draftsLoading ? <Skeleton className="h-8 w-12" /> : draftsCount}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -147,9 +154,7 @@ export default function EvalDashboardPage() {
               {evalModules.map((module) => (
                 <Card
                   key={module.title}
-                  className={`group relative overflow-hidden transition-all hover:shadow-lg ${
-                    module.disabled ? 'opacity-60' : 'cursor-pointer'
-                  }`}
+                  className="group relative overflow-hidden transition-all hover:shadow-lg cursor-pointer"
                 >
                   <div
                     className={`absolute inset-0 bg-gradient-to-r ${module.color} opacity-0 group-hover:opacity-5 transition-opacity`}
@@ -161,9 +166,6 @@ export default function EvalDashboardPage() {
                       >
                         <module.icon className="h-5 w-5" />
                       </div>
-                      {module.disabled && (
-                        <span className="text-xs bg-muted px-2 py-1 rounded">Coming Soon</span>
-                      )}
                     </div>
                     <CardTitle className="text-lg">{module.title}</CardTitle>
                     <CardDescription>{module.description}</CardDescription>
@@ -171,14 +173,12 @@ export default function EvalDashboardPage() {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">{module.stats}</span>
-                      {!module.disabled && (
-                        <Button asChild variant="ghost" size="sm">
-                          <Link href={module.href}>
-                            Open
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </Link>
-                        </Button>
-                      )}
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={module.href}>
+                          Open
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

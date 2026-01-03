@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { submissionService } from '@/shared/services';
 import { QUERY_KEYS } from '@/shared/constants/queryKeys';
-import { CreateSubmissionRequest, SupervisorReviewRequest } from '@/shared/types';
+import { CreateSubmissionRequest, SupervisorReviewRequest, SupervisorMarksRequest } from '@/shared/types';
 import { toast } from 'sonner';
 
 // ============ Submission Queries ============
@@ -201,6 +201,57 @@ export function useLockForEvaluation() {
         error?.message ||
         error?.response?.data?.message ||
         'Failed to lock submission';
+      toast.error(message);
+    },
+  });
+}
+
+// ============ Supervisor Evaluation Hooks ============
+
+/**
+ * Hook to get locked submissions for supervisor's projects
+ */
+export function useSupervisorLockedSubmissions(page = 0, size = 10) {
+  return useQuery({
+    queryKey: QUERY_KEYS.submissions.supervisorLocked({ page, size }),
+    queryFn: () => submissionService.getLockedSubmissionsForSupervisor({ page, size }),
+    staleTime: 60 * 1000,
+  });
+}
+
+/**
+ * Hook to get supervisor marks for a submission
+ */
+export function useSupervisorMarks(submissionId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.submissions.supervisorMarks(submissionId),
+    queryFn: () => submissionService.getSupervisorMarks(submissionId),
+    enabled: !!submissionId && submissionId.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Hook for supervisor to submit marks for a locked submission
+ */
+export function useSubmitSupervisorMarks() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ submissionId, data }: { submissionId: string; data: SupervisorMarksRequest }) =>
+      submissionService.submitSupervisorMarks(submissionId, data),
+    onSuccess: (marks) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.submissions.all });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.submissions.supervisorMarks(marks.submissionId),
+      });
+      toast.success('Supervisor marks submitted successfully');
+    },
+    onError: (error: any) => {
+      const message =
+        error?.message ||
+        error?.response?.data?.message ||
+        'Failed to submit marks';
       toast.error(message);
     },
   });

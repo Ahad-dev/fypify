@@ -200,3 +200,14 @@ export function useSupervisors() {
     staleTime: 10 * 60 * 1000,
   });
 }
+
+/**
+ * Hook to get projects supervised by the current user
+ */
+export function useMySupervisedProjects(params?: PaginationParams) {
+  return useQuery({
+    queryKey: QUERY_KEYS.projects.mySupervisedList(params as Record<string, unknown>),
+    queryFn: () => projectService.getMySupervisedProjects(params),
+    staleTime: 5 * 60 * 1000,
+  });
+}

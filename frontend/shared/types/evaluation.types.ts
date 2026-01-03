@@ -26,14 +26,34 @@ export interface EvaluationMarks {
 
 // ============ Evaluation Summary ============
 
+export interface PendingEvaluator {
+  id: string;
+  fullName: string;
+  email: string;
+}
+
+export interface SupervisorMarksInfo {
+  id: string;
+  submissionId: string;
+  supervisorId: string;
+  supervisorName: string;
+  score: number;
+  createdAt: string;
+}
+
 export interface EvaluationSummary {
   submissionId: string;
   submissionStatus: string;
+  totalRequiredEvaluators: number;
   totalEvaluations: number;
   finalizedEvaluations: number;
   averageScore: number | null;
   evaluations: EvaluationMarks[];
+  pendingEvaluators: PendingEvaluator[];
+  allEvaluated: boolean;
   allFinalized: boolean;
+  supervisorMarks: SupervisorMarksInfo | null;
+  supervisorMarked: boolean;
 }
 
 // ============ Locked Submission (for eval list) ============
@@ -61,3 +81,24 @@ export interface LockedSubmission {
   deadlineDate: string | null;
   isLate: boolean;
 }
+
+// ============ My Evaluation (with submission details) ============
+
+export interface MyEvaluation {
+  id: string;
+  submissionId: string;
+  score: number;
+  comments?: string;
+  isFinal: boolean;
+  createdAt: string;
+  // Submission details
+  projectId: string;
+  projectTitle: string;
+  documentTypeCode: string;
+  documentTypeTitle: string;
+  version: number;
+  uploadedByName: string;
+  uploadedAt: string;
+  fileUrl: string | null;
+}
+

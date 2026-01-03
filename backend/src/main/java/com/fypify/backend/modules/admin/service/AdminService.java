@@ -10,7 +10,9 @@ import com.fypify.backend.modules.admin.entity.FypCommitteeMember;
 import com.fypify.backend.modules.admin.entity.SystemSetting;
 import com.fypify.backend.modules.admin.repository.EvalCommitteeMemberRepository;
 import com.fypify.backend.modules.admin.repository.FypCommitteeMemberRepository;
+import com.fypify.backend.modules.user.entity.Role;
 import com.fypify.backend.modules.user.entity.User;
+import com.fypify.backend.modules.user.repository.RoleRepository;
 import com.fypify.backend.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,6 +58,7 @@ public class AdminService {
     private final FypCommitteeMemberRepository fypCommitteeMemberRepository;
     private final EvalCommitteeMemberRepository evalCommitteeMemberRepository;
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final SystemSettingService systemSettingService;
     private final AuditLogService auditLogService;
 
@@ -74,6 +77,7 @@ public class AdminService {
 
     /**
      * Add a user to the FYP Committee.
+     * Also updates the user's role to FYP_COMMITTEE.
      */
     @Transactional
     public CommitteeMemberDto addFypCommitteeMember(UUID userId, User actor) {
@@ -86,6 +90,13 @@ public class AdminService {
             throw new ConflictException("User is already a member of FYP Committee");
         }
 
+        // Update user's role to FYP_COMMITTEE
+        Role fypCommitteeRole = roleRepository.findByName(Role.FYP_COMMITTEE)
+                .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + Role.FYP_COMMITTEE));
+        String previousRole = user.getRole() != null ? user.getRole().getName() : "NONE";
+        user.setRole(fypCommitteeRole);
+        userRepository.save(user);
+
         // Create membership
         FypCommitteeMember member = FypCommitteeMember.builder()
                 .userId(userId)
@@ -96,9 +107,11 @@ public class AdminService {
 
         // Audit log
         auditLogService.logAsync(actor, "ADD_FYP_COMMITTEE_MEMBER", "FypCommitteeMember", 
-                null, java.util.Map.of("userId", userId, "userName", user.getFullName()));
+                null, java.util.Map.of("userId", userId, "userName", user.getFullName(), 
+                        "previousRole", previousRole, "newRole", Role.FYP_COMMITTEE));
 
-        log.info("Added user {} to FYP Committee by {}", userId, actor.getEmail());
+        log.info("Added user {} to FYP Committee by {} (role changed from {} to {})", 
+                userId, actor.getEmail(), previousRole, Role.FYP_COMMITTEE);
         return toCommitteeMemberDto(member);
     }
 
@@ -135,6 +148,7 @@ public class AdminService {
 
     /**
      * Add a user to the Evaluation Committee.
+     * Also updates the user's role to EVALUATION_COMMITTEE.
      */
     @Transactional
     public CommitteeMemberDto addEvalCommitteeMember(UUID userId, User actor) {
@@ -147,6 +161,13 @@ public class AdminService {
             throw new ConflictException("User is already a member of Evaluation Committee");
         }
 
+        // Update user's role to EVALUATION_COMMITTEE
+        Role evalCommitteeRole = roleRepository.findByName(Role.EVALUATION_COMMITTEE)
+                .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + Role.EVALUATION_COMMITTEE));
+        String previousRole = user.getRole() != null ? user.getRole().getName() : "NONE";
+        user.setRole(evalCommitteeRole);
+        userRepository.save(user);
+
         // Create membership
         EvalCommitteeMember member = EvalCommitteeMember.builder()
                 .userId(userId)
@@ -157,9 +178,11 @@ public class AdminService {
 
         // Audit log
         auditLogService.logAsync(actor, "ADD_EVAL_COMMITTEE_MEMBER", "EvalCommitteeMember", 
-                null, java.util.Map.of("userId", userId, "userName", user.getFullName()));
+                null, java.util.Map.of("userId", userId, "userName", user.getFullName(),
+                        "previousRole", previousRole, "newRole", Role.EVALUATION_COMMITTEE));
 
-        log.info("Added user {} to Evaluation Committee by {}", userId, actor.getEmail());
+        log.info("Added user {} to Evaluation Committee by {} (role changed from {} to {})", 
+                userId, actor.getEmail(), previousRole, Role.EVALUATION_COMMITTEE);
         return toEvalCommitteeMemberDto(member);
     }
 

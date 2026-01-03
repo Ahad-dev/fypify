@@ -19,6 +19,11 @@ public class EvaluationSummaryDto {
     private String submissionStatus;
     
     /**
+     * Total number of evaluation committee members who should evaluate.
+     */
+    private int totalRequiredEvaluators;
+    
+    /**
      * Total number of evaluators who have submitted marks.
      */
     private int totalEvaluations;
@@ -39,7 +44,27 @@ public class EvaluationSummaryDto {
     private List<EvaluationMarksDto> evaluations;
     
     /**
-     * Whether all evaluations are finalized.
+     * List of evaluators who haven't submitted yet.
+     */
+    private List<PendingEvaluatorDto> pendingEvaluators;
+    
+    /**
+     * Whether all required evaluations are finalized.
      */
     private boolean allFinalized;
+    
+    /**
+     * Whether all committee members have evaluated (regardless of finalization).
+     */
+    private boolean allEvaluated;
+    
+    /**
+     * Supervisor marks for this submission (null if not marked).
+     */
+    private SupervisorMarksDto supervisorMarks;
+    
+    /**
+     * Whether supervisor has submitted marks.
+     */
+    private boolean supervisorMarked;
 }

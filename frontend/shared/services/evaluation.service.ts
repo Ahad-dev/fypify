@@ -4,12 +4,15 @@ import {
   EvaluationMarks,
   EvaluationSummary,
   LockedSubmission,
+  MyEvaluation,
 } from '@/shared/types/evaluation.types';
 import { PaginatedResponse, PaginationParams } from '@/shared/types/api.types';
 
 const EVAL_ENDPOINTS = {
   BASE: '/eval',
   SUBMISSIONS: '/eval/submissions',
+  PENDING: '/eval/pending',
+  MY_EVALUATIONS: '/eval/my-evaluations',
 } as const;
 
 /**
@@ -26,6 +29,28 @@ export const evaluationService = {
     const response = await api.get<ApiResponse<PaginatedResponse<LockedSubmission>>>(
       EVAL_ENDPOINTS.SUBMISSIONS,
       { params }
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Get submissions the current evaluator hasn't evaluated yet
+   */
+  getPendingSubmissions: async (): Promise<LockedSubmission[]> => {
+    const response = await api.get<ApiResponse<LockedSubmission[]>>(
+      EVAL_ENDPOINTS.PENDING
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Get all evaluations made by the current user
+   * @param isFinal Optional filter for draft (false) or finalized (true) evaluations
+   */
+  getMyEvaluations: async (isFinal?: boolean): Promise<MyEvaluation[]> => {
+    const response = await api.get<ApiResponse<MyEvaluation[]>>(
+      EVAL_ENDPOINTS.MY_EVALUATIONS,
+      { params: isFinal !== undefined ? { isFinal } : undefined }
     );
     return response.data.data;
   },
@@ -88,3 +113,4 @@ export const evaluationService = {
 };
 
 export default evaluationService;
+

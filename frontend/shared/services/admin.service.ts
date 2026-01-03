@@ -34,8 +34,11 @@ const ADMIN_ENDPOINTS = {
   // Audit Logs
   AUDIT_LOGS: '/admin/audit-logs',
   
-  // System Settings
+  // System Settings (admin - for update/delete)
   SETTINGS: '/admin/settings',
+  
+  // System Settings (public - for read)
+  SETTINGS_PUBLIC: '/settings',
   
   // Users (admin management)
   USERS: '/users',
@@ -265,11 +268,11 @@ export const adminService = {
   // ============ System Settings ============
 
   /**
-   * Get all system settings
+   * Get all system settings (public endpoint)
    */
   getSystemSettings: async (): Promise<SystemSetting[]> => {
     const response = await api.get<ApiResponse<SystemSetting[]>>(
-      ADMIN_ENDPOINTS.SETTINGS
+      ADMIN_ENDPOINTS.SETTINGS_PUBLIC
     );
     return response.data.data;
   },

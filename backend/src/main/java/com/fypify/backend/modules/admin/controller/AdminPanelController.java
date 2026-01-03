@@ -47,7 +47,7 @@ import java.util.UUID;
  * ===========================================================================================
  */
 @RestController
-@RequestMapping("/admin")
+@RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
 @Tag(name = "Admin Panel", description = "Admin operations: committees, settings, reports")
 @PreAuthorize("hasRole('ADMIN')")

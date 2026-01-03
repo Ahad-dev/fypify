@@ -88,7 +88,7 @@ public class FinalResultService {
             
             // Get supervisor score from supervisor_marks table
             BigDecimal supervisorScore = supervisorMarksRepository.findBySubmissionId(submission.getId())
-                    .map(sm -> BigDecimal.valueOf(sm.getMarks()))
+                    .map(SupervisorMarks::getScore)
                     .orElse(BigDecimal.ZERO);
             
             // Get committee average score
@@ -183,12 +183,13 @@ public class FinalResultService {
 
     /**
      * Get final result for a project.
+     * Returns null if no result exists yet.
      */
     @Transactional(readOnly = true)
     public FinalResultDto getFinalResult(UUID projectId) {
-        FinalResult finalResult = finalResultRepository.findByProjectId(projectId)
-                .orElseThrow(() -> new ResourceNotFoundException("Final result not found"));
-        return toDto(finalResult);
+        return finalResultRepository.findByProjectId(projectId)
+                .map(this::toDto)
+                .orElse(null);
     }
 
     /**

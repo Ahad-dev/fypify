@@ -33,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -289,6 +290,88 @@ public class SubmissionService {
         return submissionRepository.findPendingForSupervisor(supervisorId, pageable).map(this::toDto);
     }
 
+    /**
+     * Get locked submissions for a supervisor's projects.
+     * Returns submissions that are ready for or already undergoing evaluation.
+     * Includes supervisor marks if they exist.
+     */
+    public Page<SubmissionDto> getLockedSubmissionsForSupervisor(UUID supervisorId, Pageable pageable) {
+        return submissionRepository.findLockedForSupervisorPaged(supervisorId, pageable).map(submission -> {
+            SubmissionDto dto = toDto(submission);
+            // Add supervisor marks if they exist
+            supervisorMarksRepository.findBySubmissionId(submission.getId()).ifPresent(marks -> {
+                dto.setSupervisorScore(marks.getScore());
+                dto.setSupervisorMarkedAt(marks.getCreatedAt());
+            });
+            return dto;
+        });
+    }
+
+    /**
+     * Submit or update supervisor marks for a locked submission.
+     * This is separate from the approval flow - allows supervisors to add marks after submission is locked.
+     */
+    @Transactional
+    public SupervisorMarksDto submitSupervisorMarks(UUID submissionId, BigDecimal score, User supervisor) {
+        DocumentSubmission submission = findById(submissionId);
+        
+        // Verify submission is locked (not just pending)
+        if (!submission.isLocked()) {
+            throw new BusinessRuleException("SUBMISSION_NOT_LOCKED", 
+                "Supervisor marks can only be submitted for locked submissions");
+        }
+        
+        // Verify supervisor owns this project
+        if (!submission.getProject().getSupervisor().getId().equals(supervisor.getId())) {
+            throw new BusinessRuleException("UNAUTHORIZED", 
+                "You are not the supervisor for this project");
+        }
+        
+        // Validate score
+        if (score == null || score.compareTo(BigDecimal.ZERO) < 0 || score.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new BusinessRuleException("INVALID_SCORE", "Score must be between 0 and 100");
+        }
+        
+        // Save or update marks
+        SupervisorMarks existingMarks = supervisorMarksRepository.findBySubmissionIdAndSupervisorId(submissionId, supervisor.getId()).orElse(null);
+        
+        if (existingMarks != null) {
+            existingMarks.setScore(score);
+            supervisorMarksRepository.save(existingMarks);
+            log.info("Updated supervisor marks for locked submission: submissionId={}, score={}", submissionId, score);
+            return toSupervisorMarksDto(existingMarks);
+        } else {
+            SupervisorMarks newMarks = SupervisorMarks.builder()
+                    .submission(submission)
+                    .supervisor(supervisor)
+                    .score(score)
+                    .build();
+            supervisorMarksRepository.save(newMarks);
+            log.info("Saved new supervisor marks for locked submission: submissionId={}, score={}", submissionId, score);
+            return toSupervisorMarksDto(newMarks);
+        }
+    }
+
+    /**
+     * Get supervisor marks for a submission.
+     */
+    public SupervisorMarksDto getSupervisorMarks(UUID submissionId) {
+        return supervisorMarksRepository.findBySubmissionId(submissionId)
+                .map(this::toSupervisorMarksDto)
+                .orElse(null);
+    }
+
+    private SupervisorMarksDto toSupervisorMarksDto(SupervisorMarks marks) {
+        return SupervisorMarksDto.builder()
+                .id(marks.getId())
+                .submissionId(marks.getSubmission().getId())
+                .supervisorId(marks.getSupervisor().getId())
+                .supervisorName(marks.getSupervisor().getFullName())
+                .score(marks.getScore())
+                .createdAt(marks.getCreatedAt())
+                .build();
+    }
+
     // ==================== Submission State Transitions ====================
 
     /**
@@ -438,25 +521,25 @@ public class SubmissionService {
      */
     private void saveSupervisorMarks(DocumentSubmission submission, User supervisor, Integer marks, String comments) {
         // Check if marks already exist
-        SupervisorMarks existingMarks = supervisorMarksRepository.findBySubmissionId(submission.getId())
+        SupervisorMarks existingMarks = supervisorMarksRepository.findBySubmissionIdAndSupervisorId(submission.getId(), supervisor.getId())
                 .orElse(null);
+        
+        BigDecimal score = marks != null ? BigDecimal.valueOf(marks) : BigDecimal.ZERO;
         
         if (existingMarks != null) {
             // Update existing marks
-            existingMarks.setMarks(marks);
-            existingMarks.setPrivateComments(comments);
+            existingMarks.setScore(score);
             supervisorMarksRepository.save(existingMarks);
-            log.info("Updated supervisor marks for submission: submissionId={}, marks={}", submission.getId(), marks);
+            log.info("Updated supervisor marks for submission: submissionId={}, score={}", submission.getId(), score);
         } else {
             // Create new marks
             SupervisorMarks supervisorMarks = SupervisorMarks.builder()
                     .submission(submission)
                     .supervisor(supervisor)
-                    .marks(marks)
-                    .privateComments(comments)
+                    .score(score)
                     .build();
             supervisorMarksRepository.save(supervisorMarks);
-            log.info("Saved supervisor marks for submission: submissionId={}, marks={}", submission.getId(), marks);
+            log.info("Saved supervisor marks for submission: submissionId={}, score={}", submission.getId(), score);
         }
     }
 
@@ -663,7 +746,7 @@ public class SubmissionService {
         boolean isLate = deadline != null && submission.getUploadedAt() != null 
                 && submission.getUploadedAt().isAfter(deadline);
 
-        return SubmissionDto.builder()
+        SubmissionDto dto = SubmissionDto.builder()
                 .id(submission.getId())
                 .projectId(submission.getProject() != null ? submission.getProject().getId() : null)
                 .projectTitle(submission.getProject() != null ? submission.getProject().getTitle() : null)
@@ -687,6 +770,14 @@ public class SubmissionService {
                 .isLate(isLate)
                 .deadlinePassed(deadlinePassed)
                 .build();
+        
+        // Add supervisor marks if they exist
+        supervisorMarksRepository.findBySubmissionId(submission.getId()).ifPresent(marks -> {
+            dto.setSupervisorScore(marks.getScore());
+            dto.setSupervisorMarkedAt(marks.getCreatedAt());
+        });
+        
+        return dto;
     }
 
     /**
@@ -707,16 +798,37 @@ public class SubmissionService {
 
     /**
      * Get submissions locked for evaluation.
+     * Returns all submissions that are LOCKED_FOR_EVAL or EVAL_IN_PROGRESS.
      */
     public Page<SubmissionDto> getLockedSubmissions(Pageable pageable) {
-        Page<DocumentSubmission> submissions = submissionRepository.findByStatus(
-            SubmissionStatus.LOCKED_FOR_EVAL, pageable);
-        
-        // Also include EVAL_IN_PROGRESS submissions
-        Page<DocumentSubmission> inProgress = submissionRepository.findByStatus(
-            SubmissionStatus.EVAL_IN_PROGRESS, pageable);
+        // Get submissions that are locked or in progress
+        Page<DocumentSubmission> submissions = submissionRepository.findByStatusIn(
+            List.of(SubmissionStatus.LOCKED_FOR_EVAL, SubmissionStatus.EVAL_IN_PROGRESS), 
+            pageable);
         
         return submissions.map(this::toDto);
+    }
+
+    /**
+     * Get submissions pending evaluation by a specific evaluator.
+     * Returns submissions that the evaluator has NOT yet evaluated.
+     */
+    public List<SubmissionDto> getPendingSubmissionsForEvaluator(UUID evaluatorId) {
+        // Get all locked/in-progress submissions
+        List<DocumentSubmission> allLocked = submissionRepository.findByStatusIn(
+            List.of(SubmissionStatus.LOCKED_FOR_EVAL, SubmissionStatus.EVAL_IN_PROGRESS));
+        
+        // Get submission IDs this evaluator has already evaluated
+        List<EvaluationMarks> evaluatorMarks = evaluationMarksRepository.findByEvaluatorId(evaluatorId);
+        java.util.Set<UUID> evaluatedIds = evaluatorMarks.stream()
+                .map(m -> m.getSubmission().getId())
+                .collect(Collectors.toSet());
+        
+        // Filter to only unevaluated submissions
+        return allLocked.stream()
+                .filter(s -> !evaluatedIds.contains(s.getId()))
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -826,50 +938,131 @@ public class SubmissionService {
 
     /**
      * Get evaluation summary for a submission.
+     * Includes all required evaluators and who has/hasn't evaluated.
      */
     public EvaluationSummaryDto getEvaluationSummary(UUID submissionId) {
         DocumentSubmission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
 
+        // Get all evaluation committee members (required evaluators)
+        List<User> allEvaluators = userRepository.findByRoleName(Role.EVALUATION_COMMITTEE);
+        int totalRequired = allEvaluators.size();
+
+        // Get submitted evaluations
         List<EvaluationMarks> allMarks = evaluationMarksRepository.findBySubmissionId(submissionId);
         List<EvaluationMarksDto> markDtos = allMarks.stream()
                 .map(this::toEvaluationMarksDto)
                 .collect(Collectors.toList());
 
+        // Count finalized evaluations
         long finalizedCount = allMarks.stream().filter(EvaluationMarks::getIsFinal).count();
         
+        // Calculate average score from finalized evaluations
         Double avgScore = evaluationMarksRepository.calculateAverageScoreBySubmissionId(submissionId)
                 .orElse(null);
+
+        // Find evaluators who haven't submitted yet
+        java.util.Set<UUID> evaluatedByIds = allMarks.stream()
+                .map(m -> m.getEvaluator().getId())
+                .collect(Collectors.toSet());
+        
+        List<PendingEvaluatorDto> pendingEvaluators = allEvaluators.stream()
+                .filter(evaluator -> !evaluatedByIds.contains(evaluator.getId()))
+                .map(evaluator -> PendingEvaluatorDto.builder()
+                        .id(evaluator.getId())
+                        .fullName(evaluator.getFullName())
+                        .email(evaluator.getEmail())
+                        .build())
+                .collect(Collectors.toList());
+
+        // All evaluated = all committee members have submitted
+        boolean allEvaluated = pendingEvaluators.isEmpty() && totalRequired > 0;
+        
+        // All finalized = all committee members have finalized
+        boolean allFinalized = allEvaluated && finalizedCount == totalRequired;
+
+        // Get supervisor marks
+        SupervisorMarksDto supervisorMarksDto = supervisorMarksRepository.findBySubmissionId(submissionId)
+                .map(this::toSupervisorMarksDto)
+                .orElse(null);
+        boolean supervisorMarked = supervisorMarksDto != null;
 
         return EvaluationSummaryDto.builder()
                 .submissionId(submissionId)
                 .submissionStatus(submission.getStatus().name())
+                .totalRequiredEvaluators(totalRequired)
                 .totalEvaluations(allMarks.size())
                 .finalizedEvaluations((int) finalizedCount)
                 .averageScore(avgScore != null ? java.math.BigDecimal.valueOf(avgScore) : null)
                 .evaluations(markDtos)
-                .allFinalized(!allMarks.isEmpty() && finalizedCount == allMarks.size())
+                .pendingEvaluators(pendingEvaluators)
+                .allEvaluated(allEvaluated)
+                .allFinalized(allFinalized)
+                .supervisorMarks(supervisorMarksDto)
+                .supervisorMarked(supervisorMarked)
                 .build();
     }
 
     /**
      * Check if all evaluations are finalized and update submission status.
+     * Requires ALL evaluation committee members to have finalized their evaluations.
      */
     private void checkAndFinalizeSubmission(UUID submissionId) {
-        long total = evaluationMarksRepository.countBySubmissionId(submissionId);
+        // Get total number of required evaluators (all EVALUATION_COMMITTEE members)
+        long totalRequired = userRepository.countByRoleName(Role.EVALUATION_COMMITTEE);
+        
+        // Get count of submitted and finalized evaluations
+        long totalSubmitted = evaluationMarksRepository.countBySubmissionId(submissionId);
         long finalized = evaluationMarksRepository.countFinalizedBySubmissionId(submissionId);
         
-        // Finalize submission if at least one evaluator has finalized
-        // (Alternative: require all evaluators to finalize)
-        if (total > 0 && finalized == total) {
+        // Only finalize submission when ALL committee members have finalized
+        if (totalRequired > 0 && finalized == totalRequired) {
             DocumentSubmission submission = submissionRepository.findById(submissionId).orElse(null);
             if (submission != null && submission.getStatus() == SubmissionStatus.EVAL_IN_PROGRESS) {
                 submission.finalizeEvaluation();
                 submissionRepository.save(submission);
-                log.info("All evaluations finalized for submission {}, status updated to EVAL_FINALIZED", 
-                        submissionId);
+                
+                // Calculate and log final average score
+                Double avgScore = evaluationMarksRepository.calculateAverageScoreBySubmissionId(submissionId)
+                        .orElse(null);
+                
+                log.info("All {} evaluators have finalized for submission {}. Status updated to EVAL_FINALIZED. Average score: {}", 
+                        totalRequired, submissionId, avgScore);
+                
+                // Notify project group about completion
+                notifyEvaluationComplete(submission, avgScore);
             }
+        } else {
+            log.debug("Submission {} has {}/{} finalized evaluations (required: {})", 
+                    submissionId, finalized, totalSubmitted, totalRequired);
         }
+    }
+    
+    /**
+     * Notify project group that evaluation is complete.
+     */
+    private void notifyEvaluationComplete(DocumentSubmission submission, Double avgScore) {
+        Project project = submission.getProject();
+        if (project == null || project.getGroup() == null) return;
+        
+        // Notify all group members
+        project.getGroup().getMembers().forEach(member -> {
+            notificationService.sendNotificationAsync(
+                    member.getStudent(),
+                    NotificationType.EVALUATION_FINALIZED,
+                    Map.of(
+                            "submissionId", submission.getId().toString(),
+                            "projectId", project.getId().toString(),
+                            "projectTitle", project.getTitle(),
+                            "documentType", submission.getDocumentType().getTitle(),
+                            "averageScore", avgScore != null ? String.format("%.1f", avgScore) : "N/A",
+                            "title", "Evaluation Complete",
+                            "message", String.format("All evaluations for '%s' have been finalized. Average score: %s", 
+                                    submission.getDocumentType().getTitle(),
+                                    avgScore != null ? String.format("%.1f", avgScore) : "N/A")
+                    )
+            );
+        });
     }
 
     /**
@@ -907,6 +1100,56 @@ public class SubmissionService {
                 .comments(marks.getComments())
                 .isFinal(marks.getIsFinal())
                 .createdAt(marks.getCreatedAt())
+                .build();
+    }
+
+    /**
+     * Get all evaluations made by the current evaluator.
+     * Returns evaluations with submission details for the "My Evaluations" page.
+     */
+    public List<MyEvaluationDto> getMyEvaluations(UUID evaluatorId, Boolean isFinal) {
+        List<EvaluationMarks> evaluations = evaluationMarksRepository.findByEvaluatorId(evaluatorId);
+        
+        // Filter by isFinal if specified
+        if (isFinal != null) {
+            evaluations = evaluations.stream()
+                    .filter(e -> e.getIsFinal().equals(isFinal))
+                    .collect(Collectors.toList());
+        }
+        
+        return evaluations.stream()
+                .map(this::toMyEvaluationDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Convert EvaluationMarks entity to MyEvaluationDto with submission details.
+     */
+    private MyEvaluationDto toMyEvaluationDto(EvaluationMarks marks) {
+        DocumentSubmission submission = marks.getSubmission();
+        
+        return MyEvaluationDto.builder()
+                .id(marks.getId())
+                .submissionId(submission != null ? submission.getId() : null)
+                .score(marks.getScore())
+                .comments(marks.getComments())
+                .isFinal(marks.getIsFinal())
+                .createdAt(marks.getCreatedAt())
+                // Submission details
+                .projectId(submission != null && submission.getProject() != null 
+                        ? submission.getProject().getId() : null)
+                .projectTitle(submission != null && submission.getProject() != null 
+                        ? submission.getProject().getTitle() : null)
+                .documentTypeCode(submission != null && submission.getDocumentType() != null 
+                        ? submission.getDocumentType().getCode() : null)
+                .documentTypeTitle(submission != null && submission.getDocumentType() != null 
+                        ? submission.getDocumentType().getTitle() : null)
+                .version(submission != null ? submission.getVersion() : null)
+                .uploadedByName(submission != null && submission.getUploadedBy() != null 
+                        ? submission.getUploadedBy().getFullName() : null)
+                .uploadedAt(submission != null ? submission.getUploadedAt() : null)
+                .fileUrl(submission != null && submission.getFile() != null 
+                        ? submission.getFile().getSecureUrl() : null)
                 .build();
     }
 }

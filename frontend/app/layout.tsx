@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import ReactQueryProvider from "@/providers/ReactQueryProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SystemSettingsProvider } from "@/contexts/SystemSettingsContext";
 import { Toaster } from "sonner";
 
 const inter = Inter({
@@ -50,18 +51,21 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
           <ReactQueryProvider>
             <AuthProvider>
-              {children}
-              <Toaster 
-                position="top-right" 
-                richColors 
-                closeButton
-                toastOptions={{
-                  duration: 4000,
-                }}
-              />
+              <SystemSettingsProvider>
+                {children}
+                <Toaster 
+                  position="top-right" 
+                  richColors 
+                  closeButton
+                  toastOptions={{
+                    duration: 4000,
+                  }}
+                />
+              </SystemSettingsProvider>
             </AuthProvider>
           </ReactQueryProvider>
       </body>
     </html>
   );
 }
+

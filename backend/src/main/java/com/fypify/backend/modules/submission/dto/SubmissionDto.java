@@ -4,6 +4,7 @@ import com.fypify.backend.modules.file.dto.FileUploadResponse;
 import com.fypify.backend.modules.submission.entity.SubmissionStatus;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -42,5 +43,9 @@ public class SubmissionDto {
     private Instant deadlineDate;
     private Boolean isLate;
     private Boolean deadlinePassed;
+    
+    // Supervisor marks (populated for supervisor locked submissions)
+    private BigDecimal supervisorScore;
+    private Instant supervisorMarkedAt;
 }
 

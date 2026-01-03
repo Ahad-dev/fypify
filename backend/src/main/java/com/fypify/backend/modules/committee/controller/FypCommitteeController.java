@@ -154,9 +154,10 @@ public class FypCommitteeController {
 
     @GetMapping("/projects/{projectId}/result")
     @PreAuthorize("hasAnyRole('FYP_COMMITTEE', 'ADMIN')")
-    @Operation(summary = "Get final result", description = "Get computed final result for a project")
+    @Operation(summary = "Get final result", description = "Get computed final result for a project. Returns null if not computed yet.")
     public ResponseEntity<ApiResponse<FinalResultDto>> getFinalResult(
             @PathVariable UUID projectId) {
-        return ResponseEntity.ok(ApiResponse.success(finalResultService.getFinalResult(projectId)));
+        FinalResultDto result = finalResultService.getFinalResult(projectId);
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 }

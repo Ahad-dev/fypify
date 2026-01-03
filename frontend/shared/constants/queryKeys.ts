@@ -65,6 +65,7 @@ export const QUERY_KEYS = {
     byGroup: (groupId: string) => [...QUERY_KEYS.projects.all, 'byGroup', groupId] as const,
     stats: () => [...QUERY_KEYS.projects.all, 'stats'] as const,
     supervisors: () => [...QUERY_KEYS.projects.all, 'supervisors'] as const,
+    mySupervisedList: (filters?: Record<string, unknown>) => [...QUERY_KEYS.projects.all, 'mySupervised', filters] as const,
   },
 
   // ============ GROUPS ============
@@ -138,9 +139,12 @@ export const QUERY_KEYS = {
     rubric: (id: string) => [...QUERY_KEYS.evaluations.rubrics(), id] as const,
     // Evaluation Committee specific
     locked: () => [...QUERY_KEYS.evaluations.all, 'locked'] as const,
+    pending: () => [...QUERY_KEYS.evaluations.all, 'pending'] as const,
     marks: (submissionId: string) => [...QUERY_KEYS.evaluations.all, 'marks', submissionId] as const,
     myEvaluation: (submissionId: string) => [...QUERY_KEYS.evaluations.all, 'my', submissionId] as const,
     summary: (submissionId: string) => [...QUERY_KEYS.evaluations.all, 'summary', submissionId] as const,
+    // My evaluations list (for dashboard)
+    myEvaluations: (isFinal?: boolean) => [...QUERY_KEYS.evaluations.all, 'myEvaluations', isFinal] as const,
   },
 
   // ============ NOTIFICATIONS ============
@@ -219,6 +223,9 @@ export const QUERY_KEYS = {
     detail: (id: string) => [...QUERY_KEYS.submissions.all, 'detail', id] as const,
     pending: () => [...QUERY_KEYS.submissions.all, 'pending'] as const,
     deadlines: (projectId: string) => [...QUERY_KEYS.submissions.all, 'deadlines', projectId] as const,
+    // Supervisor evaluation
+    supervisorLocked: (filters?: Record<string, unknown>) => [...QUERY_KEYS.submissions.all, 'supervisorLocked', filters] as const,
+    supervisorMarks: (submissionId: string) => [...QUERY_KEYS.submissions.all, 'supervisorMarks', submissionId] as const,
   },
 } as const;
 

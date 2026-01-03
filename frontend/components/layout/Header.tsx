@@ -18,6 +18,9 @@ import {
   FileText,
   Calendar,
   GraduationCap,
+  BarChart3,
+  Form,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -35,7 +38,7 @@ import { NotificationPanel } from './NotificationPanel';
 import { cn } from '@/lib/utils';
 
 // Navigation items based on user role
-const getNavigationItems = (isAdmin: boolean, isSupervisor: boolean, isStudent: boolean, isFypCommittee: boolean) => {
+const getNavigationItems = (isAdmin: boolean, isSupervisor: boolean, isStudent: boolean, isFypCommittee: boolean, isEvalCommittee: boolean) => {
   const items: { name: string; href: string; icon: typeof LayoutDashboard; roles: string[] }[] = [];
 
   // Add role-specific dashboard
@@ -53,6 +56,13 @@ const getNavigationItems = (isAdmin: boolean, isSupervisor: boolean, isStudent: 
       icon: LayoutDashboard,
       roles: ['FYP_COMMITTEE'],
     });
+  } else if (isEvalCommittee) {
+    items.push({
+      name: 'Dashboard',
+      href: '/committee/eval/dashboard',
+      icon: LayoutDashboard,
+      roles: ['EVALUATION_COMMITTEE'],
+    });
   } else if (isSupervisor) {
     items.push({
       name: 'Dashboard',
@@ -69,13 +79,13 @@ const getNavigationItems = (isAdmin: boolean, isSupervisor: boolean, isStudent: 
     });
   }
 
-  // Common items
-  items.push({
-    name: 'Projects',
-    href: '/projects',
-    icon: FolderKanban,
-    roles: ['all'],
-  });
+  // // Common items
+  // items.push({
+  //   name: 'Projects',
+  //   href: '/projects',
+  //   icon: FolderKanban,
+  //   roles: ['all'],
+  // });
 
   if (isStudent) {
     items.push({
@@ -85,11 +95,17 @@ const getNavigationItems = (isAdmin: boolean, isSupervisor: boolean, isStudent: 
       roles: ['STUDENT'],
     });
     items.push({
-      name: 'Proposals',
-      href: '/student/proposals',
-      icon: FileText,
-      roles: ['STUDENT'],
+      name:"Submissions",
+      href:"/student/submissions",
+      icon:FileText,
+      roles:["STUDENT"]
     });
+    items.push({
+      name:"Result",
+      href:"/student/results",
+      icon:Form,
+      roles:["STUDENT"]
+    })
   }
 
   if (isSupervisor && !isAdmin) {
@@ -105,6 +121,50 @@ const getNavigationItems = (isAdmin: boolean, isSupervisor: boolean, isStudent: 
       icon: FileText,
       roles: ['SUPERVISOR'],
     });
+    items.push({
+      name: 'Evaluation',
+      href: '/supervisor/evaluation',
+      icon: ClipboardCheck,
+      roles: ['SUPERVISOR'],
+    });
+  }
+
+  // FYP Committee navigation
+  if (isFypCommittee) {
+    items.push({
+      name: 'Projects',
+      href: '/committee/fyp/projects',
+      icon: FileText,
+      roles: ['FYP_COMMITTEE'],
+    });
+    items.push({
+      name: 'Deadlines',
+      href: '/committee/fyp/deadlines',
+      icon: Calendar,
+      roles: ['FYP_COMMITTEE'],
+    });
+    items.push({
+      name: 'Results',
+      href: '/committee/fyp/results',
+      icon: BarChart3,
+      roles: ['FYP_COMMITTEE'],
+    });
+  }
+
+  // Evaluation Committee navigation
+  if (isEvalCommittee) {
+    items.push({
+      name: 'Submissions',
+      href: '/committee/eval/submissions',
+      icon: FileText,
+      roles: ['EVALUATION_COMMITTEE'],
+    });
+    items.push({
+      name: 'My Evaluations',
+      href: '/committee/eval/my-evaluations',
+      icon: ClipboardCheck,
+      roles: ['EVALUATION_COMMITTEE'],
+    });
   }
 
   if (isAdmin) {
@@ -115,11 +175,24 @@ const getNavigationItems = (isAdmin: boolean, isSupervisor: boolean, isStudent: 
       roles: ['ADMIN'],
     });
     items.push({
-      name: 'Semesters',
-      href: '/admin/semesters',
-      icon: GraduationCap,
+      name: 'Doc Types',
+      href: '/admin/document-types',
+      icon: FileText,
       roles: ['ADMIN'],
     });
+    items.push({
+      name: 'Settings',
+      href: '/admin/settings',
+      icon: Settings,
+      roles: ['ADMIN'],
+    });
+    items.push({
+      name: 'Reports',
+      href: '/admin/reports',
+      icon: BarChart3,
+      roles: ['ADMIN'],
+    });
+
   }
 
   return items;
@@ -127,13 +200,13 @@ const getNavigationItems = (isAdmin: boolean, isSupervisor: boolean, isStudent: 
 
 export function Header() {
   const pathname = usePathname();
-  const { user, logout, isAdmin, isSupervisor, isStudent, isFypCommittee } = useAuthContext();
+  const { user, logout, isAdmin, isSupervisor, isStudent, isFypCommittee, isEvalCommittee } = useAuthContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
 
-  const navigationItems = getNavigationItems(isAdmin, isSupervisor, isStudent, isFypCommittee);
+  const navigationItems = getNavigationItems(isAdmin, isSupervisor, isStudent, isFypCommittee, isEvalCommittee);
 
   // GSAP animations on mount
   useEffect(() => {

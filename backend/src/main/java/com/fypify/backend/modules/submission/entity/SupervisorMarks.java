@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -13,8 +14,8 @@ import java.util.UUID;
  * Marks are stored only for submissions that are locked for evaluation.
  * These marks are hidden from students.
  * 
- * The marks should be interpreted as a percentage (0-100).
- * The final contribution is calculated as: marks * (documentType.weightSupervisor / 100)
+ * The score should be interpreted as a percentage (0-100).
+ * The final contribution is calculated as: score * (documentType.weightSupervisor / 100)
  */
 @Entity
 @Table(name = "supervisor_marks",
@@ -34,8 +35,8 @@ public class SupervisorMarks {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "submission_id", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "submission_id", nullable = false)
     private DocumentSubmission submission;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -43,33 +44,27 @@ public class SupervisorMarks {
     private User supervisor;
 
     /**
-     * Marks given by supervisor (0-100 scale).
+     * Score given by supervisor (0-100 scale).
      * This will be weighted by documentType.weightSupervisor when calculating final grade.
      */
-    @Column(name = "marks", nullable = false)
-    private Integer marks;
-
-    /**
-     * Private comments from supervisor (not visible to students).
-     */
-    @Column(name = "private_comments", columnDefinition = "TEXT")
-    private String privateComments;
+    @Column(name = "score", nullable = false, precision = 5, scale = 2)
+    private BigDecimal score;
 
     /**
      * When the marks were given.
      */
     @CreationTimestamp
-    @Column(name = "marked_at", updatable = false)
-    private Instant markedAt;
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
 
     /**
-     * Validate marks are in valid range.
+     * Validate score is in valid range.
      */
     @PrePersist
     @PreUpdate
-    public void validateMarks() {
-        if (marks < 0 || marks > 100) {
-            throw new IllegalStateException("Marks must be between 0 and 100");
+    public void validateScore() {
+        if (score.compareTo(BigDecimal.ZERO) < 0 || score.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new IllegalStateException("Score must be between 0 and 100");
         }
     }
 }

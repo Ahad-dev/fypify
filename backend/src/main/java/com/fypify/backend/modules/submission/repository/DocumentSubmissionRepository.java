@@ -98,6 +98,16 @@ public interface DocumentSubmissionRepository extends JpaRepository<DocumentSubm
     Page<DocumentSubmission> findByStatus(SubmissionStatus status, Pageable pageable);
 
     /**
+     * Find submissions by multiple statuses with pagination.
+     */
+    Page<DocumentSubmission> findByStatusIn(List<SubmissionStatus> statuses, Pageable pageable);
+
+    /**
+     * Find submissions by multiple statuses (no pagination).
+     */
+    List<DocumentSubmission> findByStatusIn(List<SubmissionStatus> statuses);
+
+    /**
      * Find pending submissions for a supervisor.
      */
     @Query("SELECT ds FROM DocumentSubmission ds " +
@@ -106,6 +116,28 @@ public interface DocumentSubmissionRepository extends JpaRepository<DocumentSubm
            "AND ds.status = 'PENDING_SUPERVISOR' " +
            "ORDER BY ds.uploadedAt DESC")
     Page<DocumentSubmission> findPendingForSupervisor(@Param("supervisorId") UUID supervisorId, Pageable pageable);
+
+    /**
+     * Find locked submissions for a supervisor's projects.
+     * Returns submissions that are LOCKED_FOR_EVAL, EVAL_IN_PROGRESS, or EVAL_FINALIZED.
+     */
+    @Query("SELECT ds FROM DocumentSubmission ds " +
+           "LEFT JOIN FETCH ds.project p " +
+           "LEFT JOIN FETCH ds.documentType dt " +
+           "LEFT JOIN FETCH ds.file f " +
+           "WHERE p.supervisor.id = :supervisorId " +
+           "AND ds.status IN ('LOCKED_FOR_EVAL', 'EVAL_IN_PROGRESS', 'EVAL_FINALIZED')")
+    List<DocumentSubmission> findLockedForSupervisor(@Param("supervisorId") UUID supervisorId);
+
+    /**
+     * Find locked submissions for a supervisor's projects (paginated).
+     */
+    @Query("SELECT ds FROM DocumentSubmission ds " +
+           "JOIN ds.project p " +
+           "WHERE p.supervisor.id = :supervisorId " +
+           "AND ds.status IN ('LOCKED_FOR_EVAL', 'EVAL_IN_PROGRESS', 'EVAL_FINALIZED') " +
+           "ORDER BY ds.uploadedAt DESC")
+    Page<DocumentSubmission> findLockedForSupervisorPaged(@Param("supervisorId") UUID supervisorId, Pageable pageable);
 
     /**
      * Check if a final submission exists for project and document type.

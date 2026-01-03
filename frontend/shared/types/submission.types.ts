@@ -69,6 +69,9 @@ export interface DocumentSubmission {
   isLateSubmission: boolean;
   deadline: string | null;
   uploadedByName?: string;
+  // Supervisor marks (populated for supervisor locked submissions)
+  supervisorScore?: number | null;
+  supervisorMarkedAt?: string | null;
 }
 
 // ============ Request DTOs ============
@@ -82,6 +85,21 @@ export interface SupervisorReviewRequest {
   approve: boolean;
   feedback?: string;
   marks?: number; // 0-100, required when approving after deadline
+}
+
+// ============ Supervisor Marks ============
+
+export interface SupervisorMarks {
+  id: string;
+  submissionId: string;
+  supervisorId: string;
+  supervisorName: string;
+  score: number;
+  createdAt: string;
+}
+
+export interface SupervisorMarksRequest {
+  score: number; // 0-100
 }
 
 // Note: DocumentType is defined in admin.types.ts

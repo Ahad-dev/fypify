@@ -3,6 +3,8 @@ import {
   DocumentSubmission,
   CreateSubmissionRequest,
   SupervisorReviewRequest,
+  SupervisorMarks,
+  SupervisorMarksRequest,
   DocumentType,
   ProjectDeadline,
 } from '@/shared/types';
@@ -162,6 +164,52 @@ export const submissionService = {
       `${SUBMISSION_ENDPOINTS.PROJECTS}/${projectId}/deadlines`
     );
     return response.data.data;
+  },
+
+  // ============ Supervisor Evaluation ============
+
+  /**
+   * Get locked submissions for supervisor's projects
+   */
+  getLockedSubmissionsForSupervisor: async (
+    params?: PaginationParams
+  ): Promise<PaginatedResponse<DocumentSubmission>> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<DocumentSubmission>>>(
+      `${SUBMISSION_ENDPOINTS.SUBMISSIONS}/supervisor/locked`,
+      { params }
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Submit supervisor marks for a locked submission
+   */
+  submitSupervisorMarks: async (
+    submissionId: string,
+    data: SupervisorMarksRequest
+  ): Promise<SupervisorMarks> => {
+    const response = await api.post<ApiResponse<SupervisorMarks>>(
+      `${SUBMISSION_ENDPOINTS.SUBMISSIONS}/${submissionId}/supervisor-marks`,
+      data
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Get supervisor marks for a submission
+   */
+  getSupervisorMarks: async (submissionId: string): Promise<SupervisorMarks | null> => {
+    try {
+      const response = await api.get<ApiResponse<SupervisorMarks>>(
+        `${SUBMISSION_ENDPOINTS.SUBMISSIONS}/${submissionId}/supervisor-marks`
+      );
+      return response.data.data ?? null;
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
   },
 };
 

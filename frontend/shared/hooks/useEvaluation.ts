@@ -18,6 +18,17 @@ export function useLockedSubmissions(page = 0, size = 20) {
 }
 
 /**
+ * Hook to get submissions the current evaluator hasn't evaluated yet
+ */
+export function usePendingSubmissions() {
+  return useQuery({
+    queryKey: QUERY_KEYS.evaluations.pending(),
+    queryFn: () => evaluationService.getPendingSubmissions(),
+    staleTime: 60 * 1000,
+  });
+}
+
+/**
  * Hook to get all evaluation marks for a submission
  */
 export function useEvaluationMarks(submissionId: string) {
@@ -53,6 +64,18 @@ export function useEvaluationSummary(submissionId: string) {
   });
 }
 
+/**
+ * Hook to get all evaluations made by the current user
+ * @param isFinal Optional filter for draft (false) or finalized (true) evaluations
+ */
+export function useMyEvaluations(isFinal?: boolean) {
+  return useQuery({
+    queryKey: QUERY_KEYS.evaluations.myEvaluations(isFinal),
+    queryFn: () => evaluationService.getMyEvaluations(isFinal),
+    staleTime: 30 * 1000,
+  });
+}
+
 // ============ Evaluation Mutations ============
 
 /**
@@ -75,6 +98,7 @@ export function useEvaluateSubmission() {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.evaluations.myEvaluation(variables.submissionId) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.evaluations.summary(variables.submissionId) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.evaluations.locked() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.evaluations.myEvaluations() });
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to save evaluation');
@@ -98,6 +122,7 @@ export function useFinalizeEvaluation() {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.evaluations.myEvaluation(submissionId) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.evaluations.summary(submissionId) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.evaluations.locked() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.evaluations.myEvaluations() });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notifications.all });
     },
     onError: (error: Error) => {
@@ -105,3 +130,4 @@ export function useFinalizeEvaluation() {
     },
   });
 }
+

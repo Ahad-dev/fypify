@@ -4,6 +4,7 @@ import { RoleGuard } from '@/components/auth';
 import { MainLayout } from '@/components/layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Users, 
   FileText, 
@@ -16,6 +17,9 @@ import {
   Plus,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useAdminUsers, useDocumentTypes } from '@/shared/hooks/useAdmin';
+import { useProjects } from '@/shared/hooks/useProject';
+import { useSystemSettingsContext } from '@/contexts';
 
 const adminModules = [
   {
@@ -40,21 +44,34 @@ const adminModules = [
     icon: Settings,
     href: '/admin/settings',
     color: 'from-purple-500 to-purple-600',
-    stats: 'Coming soon',
-    disabled: true,
+    stats: 'Configure Settings',
   },
   {
-    title: 'Analytics',
-    description: 'View system analytics and reports',
+    title: 'Reports',
+    description: 'View and download reports',
     icon: BarChart3,
-    href: '/admin/analytics',
+    href: '/admin/reports',
     color: 'from-green-500 to-green-600',
-    stats: 'Coming soon',
-    disabled: true,
+    stats: 'View Reports',
+    disabled: false,
   },
 ];
 
 export default function AdminDashboardPage() {
+  // Fetch data for stats
+  const { data: usersData, isLoading: usersLoading } = useAdminUsers({ page: 0, size: 1 });
+  const { data: documentTypes, isLoading: docTypesLoading } = useDocumentTypes();
+  const { data: projectsData, isLoading: projectsLoading } = useProjects({ page: 0, size: 1 });
+
+  // Extract counts
+  const totalUsers = usersData?.totalElements ?? 0;
+  const totalDocTypes = documentTypes?.length ?? 0;
+  const totalProjects = projectsData?.totalElements ?? 0;
+
+  // Get current semester from context
+  const { getCurrentSemester } = useSystemSettingsContext();
+  const currentSemester = getCurrentSemester();
+
   return (
     <RoleGuard allowedRoles={['ADMIN']}>
       <MainLayout>
@@ -88,7 +105,7 @@ export default function AdminDashboardPage() {
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
+            <Card>  
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-blue-100 dark:bg-blue-950 rounded-lg">
@@ -96,7 +113,11 @@ export default function AdminDashboardPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Users</p>
-                    <p className="text-2xl font-bold">-</p>
+                    {usersLoading ? (
+                      <Skeleton className="h-8 w-16" />
+                    ) : (
+                      <p className="text-2xl font-bold">{totalUsers}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -109,7 +130,11 @@ export default function AdminDashboardPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Document Types</p>
-                    <p className="text-2xl font-bold">-</p>
+                    {docTypesLoading ? (
+                      <Skeleton className="h-8 w-16" />
+                    ) : (
+                      <p className="text-2xl font-bold">{totalDocTypes}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -122,7 +147,11 @@ export default function AdminDashboardPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Active Projects</p>
-                    <p className="text-2xl font-bold">-</p>
+                    {projectsLoading ? (
+                      <Skeleton className="h-8 w-16" />
+                    ) : (
+                      <p className="text-2xl font-bold">{totalProjects}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -135,7 +164,7 @@ export default function AdminDashboardPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">This Semester</p>
-                    <p className="text-2xl font-bold">Fall 2024</p>
+                    <p className="text-2xl font-bold">{currentSemester}</p>
                   </div>
                 </div>
               </CardContent>

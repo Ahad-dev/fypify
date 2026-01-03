@@ -178,6 +178,52 @@ public class SubmissionController {
         return ResponseEntity.ok(ApiResponse.success(submission, message));
     }
 
+    /**
+     * Get locked submissions for supervisor's projects (for evaluation).
+     * GET /api/v1/submissions/supervisor/locked
+     */
+    @GetMapping("/submissions/supervisor/locked")
+    @PreAuthorize("hasAnyRole('SUPERVISOR', 'ADMIN')")
+    @Operation(summary = "Get locked submissions for supervisor", description = "Get locked submissions for supervisor's projects")
+    public ResponseEntity<ApiResponse<Page<SubmissionDto>>> getLockedSubmissionsForSupervisor(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PageableDefault(size = 10, sort = "uploadedAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        User supervisor = userService.getByEmail(userDetails.getUsername());
+        Page<SubmissionDto> submissions = submissionService.getLockedSubmissionsForSupervisor(supervisor.getId(), pageable);
+        return ResponseEntity.ok(ApiResponse.success(submissions));
+    }
+
+    /**
+     * Submit supervisor marks for a locked submission.
+     * POST /api/v1/submissions/{id}/supervisor-marks
+     */
+    @PostMapping("/submissions/{id}/supervisor-marks")
+    @PreAuthorize("hasAnyRole('SUPERVISOR', 'ADMIN')")
+    @Operation(summary = "Submit supervisor marks", description = "Submit marks for a locked submission")
+    public ResponseEntity<ApiResponse<SupervisorMarksDto>> submitSupervisorMarks(
+            @PathVariable UUID id,
+            @Valid @RequestBody SupervisorMarksRequest request,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        User supervisor = userService.getByEmail(userDetails.getUsername());
+        SupervisorMarksDto marks = submissionService.submitSupervisorMarks(
+                id, request.getScore(), supervisor);
+        return ResponseEntity.ok(ApiResponse.success(marks, "Supervisor marks submitted successfully"));
+    }
+
+    /**
+     * Get supervisor marks for a submission.
+     * GET /api/v1/submissions/{id}/supervisor-marks
+     */
+    @GetMapping("/submissions/{id}/supervisor-marks")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get supervisor marks", description = "Get supervisor marks for a submission")
+    public ResponseEntity<ApiResponse<SupervisorMarksDto>> getSupervisorMarks(@PathVariable UUID id) {
+        SupervisorMarksDto marks = submissionService.getSupervisorMarks(id);
+        return ResponseEntity.ok(ApiResponse.success(marks));
+    }
+
     // ==================== FYP Committee Operations ====================
 
     /**
