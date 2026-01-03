@@ -32,4 +32,14 @@ public interface FinalResultRepository extends JpaRepository<FinalResult, Long> 
      */
     @Query("SELECT fr FROM FinalResult fr WHERE fr.project.id = :projectId AND fr.released = true")
     Optional<FinalResult> findReleasedByProjectId(@Param("projectId") UUID projectId);
+
+    /**
+     * Find all released results with project details.
+     */
+    @Query("SELECT fr FROM FinalResult fr " +
+           "LEFT JOIN FETCH fr.project p " +
+           "LEFT JOIN FETCH p.supervisor " +
+           "WHERE fr.released = true " +
+           "ORDER BY fr.releasedAt DESC")
+    java.util.List<FinalResult> findAllReleased();
 }
