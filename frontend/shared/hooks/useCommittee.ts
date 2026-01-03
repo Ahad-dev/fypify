@@ -180,3 +180,68 @@ export function useCommitteeSupervisors(params?: PaginationParams) {
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 }
+
+// ============ Final Results ============
+
+/**
+ * Hook to get computed final result for a project
+ */
+export function useFinalResult(projectId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.committee.finalResults.byProject(projectId),
+    queryFn: () => committeeService.getFinalResult(projectId),
+    enabled: !!projectId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Hook to compute final result for a project
+ */
+export function useComputeFinalResult() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (projectId: string) => committeeService.computeFinalResult(projectId),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.committee.finalResults.all() });
+      queryClient.setQueryData(
+        QUERY_KEYS.committee.finalResults.byProject(result.projectId),
+        result
+      );
+      toast.success('Final result computed!', {
+        description: `Score: ${result.totalScore.toFixed(2)}`,
+      });
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.error?.message || 'Failed to compute result';
+      toast.error('Computation Failed', { description: message });
+    },
+  });
+}
+
+/**
+ * Hook to release final result to students
+ */
+export function useReleaseFinalResult() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (projectId: string) => committeeService.releaseFinalResult(projectId),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.committee.finalResults.all() });
+      queryClient.setQueryData(
+        QUERY_KEYS.committee.finalResults.byProject(result.projectId),
+        result
+      );
+      toast.success('Results released!', {
+        description: 'Students have been notified.',
+      });
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.error?.message || 'Failed to release result';
+      toast.error('Release Failed', { description: message });
+    },
+  });
+}
+
