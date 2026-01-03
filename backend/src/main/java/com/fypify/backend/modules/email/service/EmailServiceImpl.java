@@ -350,4 +350,19 @@ public class EmailServiceImpl implements EmailService {
         sendTemplateEmail(memberEmails, "New Member Joined: " + groupName, "member-joined", variables);
         log.info("Member joined emails sent for group: {}", groupName);
     }
+
+    // ==================== Password Reset Emails ====================
+
+    @Override
+    @Async("emailTaskExecutor")
+    public void sendPasswordResetEmail(String to, String resetLink, String userName) {
+        Map<String, Object> variables = Map.of(
+                "userName", userName,
+                "resetLink", resetLink,
+                "expiryMinutes", 15
+        );
+        sendTemplateEmail(to, "Reset Your Password - FYPIFY", "password-reset", variables);
+        log.info("Password reset email sent to: {}", to);
+    }
 }
+

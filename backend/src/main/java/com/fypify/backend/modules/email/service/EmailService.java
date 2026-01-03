@@ -200,4 +200,15 @@ public interface EmailService {
      * @param groupName      Name of the group
      */
     void sendMemberJoinedEmail(List<String> memberEmails, String newMemberName, String groupName);
+
+    // ==================== Password Reset Emails ====================
+
+    /**
+     * Send password reset email with reset link.
+     *
+     * @param to        Recipient email address
+     * @param resetLink Full reset link with token
+     * @param userName  Name of the user
+     */
+    void sendPasswordResetEmail(String to, String resetLink, String userName);
 }

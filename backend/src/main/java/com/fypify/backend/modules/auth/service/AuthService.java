@@ -4,9 +4,12 @@ import com.fypify.backend.common.exception.ConflictException;
 import com.fypify.backend.common.exception.UnauthorizedException;
 import com.fypify.backend.common.exception.ValidationException;
 import com.fypify.backend.modules.auth.dto.ChangePasswordRequest;
+import com.fypify.backend.modules.auth.dto.ForgotPasswordRequest;
 import com.fypify.backend.modules.auth.dto.LoginRequest;
 import com.fypify.backend.modules.auth.dto.LoginResponse;
 import com.fypify.backend.modules.auth.dto.RegisterRequest;
+import com.fypify.backend.modules.auth.dto.ResetPasswordRequest;
+import com.fypify.backend.modules.email.service.EmailService;
 import com.fypify.backend.modules.user.dto.UserDto;
 import com.fypify.backend.modules.user.entity.Role;
 import com.fypify.backend.modules.user.entity.User;
@@ -17,6 +20,7 @@ import com.fypify.backend.security.UserPrincipal;
 import com.fypify.backend.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -27,7 +31,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
+
 
 /**
  * Service for authentication operations.
@@ -84,6 +90,11 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
+
+    @Value("${frontend.url:http://localhost:3000}")
+    private String frontendUrl;
+
 
     /**
      * Authenticate user and return JWT token.
@@ -237,4 +248,88 @@ public class AuthService {
         UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
         return userPrincipal.getId();
     }
+
+    // ==================== Password Reset Methods ====================
+
+    /**
+     * Request password reset - sends email with reset link.
+     * Always returns success to prevent email enumeration.
+     * Admin users are excluded from password reset.
+     */
+    public void forgotPassword(ForgotPasswordRequest request) {
+        String email = request.getEmail().toLowerCase();
+        
+        // Find user but don't reveal if they exist
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        
+        if (userOpt.isEmpty()) {
+            // Don't reveal that user doesn't exist - just log and return
+            log.info("Password reset requested for non-existent email: {}", email);
+            return;
+        }
+
+        User user = userOpt.get();
+
+        // Admin users cannot use password reset
+        if ("ADMIN".equals(user.getRole().getName())) {
+            log.warn("Password reset attempted for admin account: {}", email);
+            return;
+        }
+
+        // Check if user is active
+        if (!user.getIsActive()) {
+            log.info("Password reset requested for disabled account: {}", email);
+            return;
+        }
+
+        // Generate reset token
+        String resetToken = tokenProvider.generatePasswordResetToken(user.getId(), email);
+        String resetLink = frontendUrl + "/reset-password?token=" + resetToken;
+
+        // Send email asynchronously
+        emailService.sendPasswordResetEmail(email, resetLink, user.getFullName());
+
+        log.info("Password reset email sent to: {}", email);
+    }
+
+    /**
+     * Reset password using token.
+     */
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        String token = request.getToken();
+
+        // Validate passwords match
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new ValidationException("Passwords do not match");
+        }
+
+        // Validate token
+        if (!tokenProvider.validatePasswordResetToken(token)) {
+            throw new UnauthorizedException("Invalid or expired reset token");
+        }
+
+        // Get user from token
+        UUID userId = tokenProvider.getUserIdFromPasswordResetToken(token);
+        User user = userService.findById(userId);
+
+        // Verify email matches (extra security check)
+        String tokenEmail = tokenProvider.getEmailFromPasswordResetToken(token);
+        if (!user.getEmail().equalsIgnoreCase(tokenEmail)) {
+            log.error("Token email mismatch for user: {}", userId);
+            throw new UnauthorizedException("Invalid reset token");
+        }
+
+        // Admin users cannot use password reset
+        if ("ADMIN".equals(user.getRole().getName())) {
+            throw new UnauthorizedException("Password reset not available for this account type");
+        }
+
+        // Update password
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        log.info("Password reset successfully for user: {}", user.getEmail());
+    }
 }
+

@@ -178,4 +178,77 @@ public class JwtTokenProvider {
     public long getJwtExpiration() {
         return accessTokenExpiration;
     }
+
+    // ==================== Password Reset Token Methods ====================
+
+    private static final long PASSWORD_RESET_EXPIRATION = 15 * 60 * 1000; // 15 minutes
+    private static final String TOKEN_PURPOSE_RESET = "PASSWORD_RESET";
+
+    /**
+     * Generate a password reset token (15 minutes expiry).
+     */
+    public String generatePasswordResetToken(UUID userId, String email) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + PASSWORD_RESET_EXPIRATION);
+
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claim("email", email)
+                .claim("purpose", TOKEN_PURPOSE_RESET)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(secretKey)
+                .compact();
+    }
+
+    /**
+     * Validate a password reset token.
+     * Returns true if token is valid, not expired, and has PASSWORD_RESET purpose.
+     */
+    public boolean validatePasswordResetToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            String purpose = claims.get("purpose", String.class);
+            return TOKEN_PURPOSE_RESET.equals(purpose);
+        } catch (ExpiredJwtException ex) {
+            log.error("Password reset token expired");
+            return false;
+        } catch (Exception ex) {
+            log.error("Invalid password reset token: {}", ex.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get user ID from password reset token.
+     * Caller should validate token first.
+     */
+    public UUID getUserIdFromPasswordResetToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return UUID.fromString(claims.getSubject());
+    }
+
+    /**
+     * Get email from password reset token.
+     */
+    public String getEmailFromPasswordResetToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.get("email", String.class);
+    }
 }
+
