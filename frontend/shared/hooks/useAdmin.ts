@@ -256,3 +256,183 @@ export function useUpdateSystemSetting() {
     },
   });
 }
+
+// ============ Committee Management Hooks ============
+
+/**
+ * Hook to get FYP Committee members
+ */
+export function useFypCommitteeMembers() {
+  return useQuery({
+    queryKey: ['admin', 'committee', 'fyp'],
+    queryFn: adminService.getFypCommitteeMembers,
+    staleTime: 30 * 1000,
+  });
+}
+
+/**
+ * Hook to add FYP Committee member
+ */
+export function useAddFypCommitteeMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => adminService.addFypCommitteeMember(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'committee', 'fyp'] });
+      toast.success('Member added to FYP Committee');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add committee member');
+    },
+  });
+}
+
+/**
+ * Hook to remove FYP Committee member
+ */
+export function useRemoveFypCommitteeMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => adminService.removeFypCommitteeMember(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'committee', 'fyp'] });
+      toast.success('Member removed from FYP Committee');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to remove committee member');
+    },
+  });
+}
+
+/**
+ * Hook to get Evaluation Committee members
+ */
+export function useEvalCommitteeMembers() {
+  return useQuery({
+    queryKey: ['admin', 'committee', 'eval'],
+    queryFn: adminService.getEvalCommitteeMembers,
+    staleTime: 30 * 1000,
+  });
+}
+
+/**
+ * Hook to add Evaluation Committee member
+ */
+export function useAddEvalCommitteeMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => adminService.addEvalCommitteeMember(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'committee', 'eval'] });
+      toast.success('Member added to Evaluation Committee');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add committee member');
+    },
+  });
+}
+
+/**
+ * Hook to remove Evaluation Committee member
+ */
+export function useRemoveEvalCommitteeMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => adminService.removeEvalCommitteeMember(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'committee', 'eval'] });
+      toast.success('Member removed from Evaluation Committee');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to remove committee member');
+    },
+  });
+}
+
+// ============ Group Size Settings Hooks ============
+
+/**
+ * Hook to get group size settings
+ */
+export function useGroupSizeSettings() {
+  return useQuery({
+    queryKey: ['admin', 'settings', 'group-size'],
+    queryFn: adminService.getGroupSizeSettings,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Hook to update group size settings
+ */
+export function useUpdateGroupSizeSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { minSize: number; maxSize: number }) => 
+      adminService.updateGroupSizeSettings(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'group-size'] });
+      toast.success('Group size settings updated');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update group size settings');
+    },
+  });
+}
+
+// ============ Reports Hooks ============
+
+/**
+ * Hook to download project marksheet
+ */
+export function useDownloadProjectMarksheet() {
+  return useMutation({
+    mutationFn: async (projectId: string) => {
+      const blob = await adminService.downloadProjectMarksheet(projectId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `marksheet-${projectId}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    },
+    onSuccess: () => {
+      toast.success('Marksheet downloaded');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to download marksheet');
+    },
+  });
+}
+
+/**
+ * Hook to download all marksheets
+ */
+export function useDownloadAllMarksheet() {
+  return useMutation({
+    mutationFn: async () => {
+      const blob = await adminService.downloadAllMarksheet();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `all-marksheets-${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    },
+    onSuccess: () => {
+      toast.success('All marksheets downloaded');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to download marksheets');
+    },
+  });
+}

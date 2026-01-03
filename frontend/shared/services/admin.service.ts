@@ -12,6 +12,20 @@ import {
 } from '@/shared/types';
 import { PaginatedResponse, PaginationParams } from '@/shared/types/api.types';
 
+// Committee member types
+export interface CommitteeMember {
+  userId: string;
+  fullName: string;
+  email: string;
+  role: string;
+  addedAt: string;
+}
+
+export interface GroupSizeSettings {
+  minSize: number;
+  maxSize: number;
+}
+
 const ADMIN_ENDPOINTS = {
   // Document Types
   DOCUMENT_TYPES: '/admin/document-types',
@@ -25,6 +39,16 @@ const ADMIN_ENDPOINTS = {
   
   // Users (admin management)
   USERS: '/users',
+  
+  // Committee Management
+  COMMITTEE_FYP: '/admin/committee/fyp',
+  COMMITTEE_EVAL: '/admin/committee/eval',
+  
+  // Group Size Settings
+  GROUP_SIZE_SETTINGS: '/admin/settings/group-size',
+  
+  // Reports
+  REPORTS_MARKSHEET: '/admin/reports/marksheet',
 } as const;
 
 /**
@@ -98,6 +122,109 @@ export const adminService = {
    */
   permanentDeleteDocumentType: async (id: string): Promise<void> => {
     await api.delete(`${ADMIN_ENDPOINTS.DOCUMENT_TYPES}/${id}/permanent`);
+  },
+
+  // ============ Committee Management ============
+
+  /**
+   * Get FYP Committee members
+   */
+  getFypCommitteeMembers: async (): Promise<CommitteeMember[]> => {
+    const response = await api.get<ApiResponse<CommitteeMember[]>>(
+      ADMIN_ENDPOINTS.COMMITTEE_FYP
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Add user to FYP Committee
+   */
+  addFypCommitteeMember: async (userId: string): Promise<CommitteeMember> => {
+    const response = await api.post<ApiResponse<CommitteeMember>>(
+      `${ADMIN_ENDPOINTS.COMMITTEE_FYP}/${userId}`
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Remove user from FYP Committee
+   */
+  removeFypCommitteeMember: async (userId: string): Promise<void> => {
+    await api.delete(`${ADMIN_ENDPOINTS.COMMITTEE_FYP}/${userId}`);
+  },
+
+  /**
+   * Get Evaluation Committee members
+   */
+  getEvalCommitteeMembers: async (): Promise<CommitteeMember[]> => {
+    const response = await api.get<ApiResponse<CommitteeMember[]>>(
+      ADMIN_ENDPOINTS.COMMITTEE_EVAL
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Add user to Evaluation Committee
+   */
+  addEvalCommitteeMember: async (userId: string): Promise<CommitteeMember> => {
+    const response = await api.post<ApiResponse<CommitteeMember>>(
+      `${ADMIN_ENDPOINTS.COMMITTEE_EVAL}/${userId}`
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Remove user from Evaluation Committee
+   */
+  removeEvalCommitteeMember: async (userId: string): Promise<void> => {
+    await api.delete(`${ADMIN_ENDPOINTS.COMMITTEE_EVAL}/${userId}`);
+  },
+
+  // ============ Group Size Settings ============
+
+  /**
+   * Get group size settings
+   */
+  getGroupSizeSettings: async (): Promise<GroupSizeSettings> => {
+    const response = await api.get<ApiResponse<GroupSizeSettings>>(
+      ADMIN_ENDPOINTS.GROUP_SIZE_SETTINGS
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Update group size settings
+   */
+  updateGroupSizeSettings: async (data: GroupSizeSettings): Promise<GroupSizeSettings> => {
+    const response = await api.put<ApiResponse<GroupSizeSettings>>(
+      ADMIN_ENDPOINTS.GROUP_SIZE_SETTINGS,
+      data
+    );
+    return response.data.data;
+  },
+
+  // ============ Reports ============
+
+  /**
+   * Download project marksheet Excel
+   */
+  downloadProjectMarksheet: async (projectId: string): Promise<Blob> => {
+    const response = await api.get(
+      `${ADMIN_ENDPOINTS.REPORTS_MARKSHEET}/${projectId}/excel`,
+      { responseType: 'blob' }
+    );
+    return response.data;
+  },
+
+  /**
+   * Download all marksheet Excel
+   */
+  downloadAllMarksheet: async (): Promise<Blob> => {
+    const response = await api.get(
+      `${ADMIN_ENDPOINTS.REPORTS_MARKSHEET}/all/excel`,
+      { responseType: 'blob' }
+    );
+    return response.data;
   },
 
   // ============ Audit Logs ============
