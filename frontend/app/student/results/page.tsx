@@ -23,7 +23,7 @@ import {
   Trophy,
   CheckCircle,
 } from 'lucide-react';
-import { useFinalResult, useMyGroup, useProject } from '@/shared/hooks';
+import { useReleasedResult, useMyGroup, useProject } from '@/shared/hooks';
 import { FinalResult, DocumentScoreBreakdown } from '@/shared/types';
 
 // ============ Score Breakdown Table (Student View) ============
@@ -77,7 +77,7 @@ function StudentScoreBreakdown({ details }: { details: FinalResult['details'] })
 export default function StudentResultsPage() {
   const { data: group, isLoading: isLoadingGroup } = useMyGroup();
   const { data: project, isLoading: isLoadingProject } = useProject(group?.projectId || '');
-  const { data: result, isLoading: resultLoading } = useFinalResult(project?.id || '');
+  const { data: result, isLoading: resultLoading } = useReleasedResult(project?.id || '');
 
   const isLoading = isLoadingGroup || isLoadingProject || resultLoading;
 

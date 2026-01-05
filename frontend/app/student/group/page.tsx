@@ -65,6 +65,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useSystemSettingsContext } from '@/contexts/SystemSettingsContext';
 import {
   useMyGroup,
   useCreateGroup,
@@ -99,6 +100,7 @@ type InviteFormData = z.infer<typeof inviteSchema>;
 
 export default function StudentGroupPage() {
   const { user } = useAuthContext();
+  const { getGroupMinSize, getGroupMaxSize } = useSystemSettingsContext();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
 
@@ -106,6 +108,12 @@ export default function StudentGroupPage() {
   const { data: group, isLoading: isLoadingGroup, refetch: refetchGroup } = useMyGroup();
   const { data: pendingInvites, isLoading: isLoadingInvites } = useMyInvites();
   const { data: groupInvites, isLoading: isLoadingGroupInvites } = useGroupInvites(group?.id || '');
+
+  // Group size validation
+  const minGroupSize = getGroupMinSize();
+  const maxGroupSize = getGroupMaxSize();
+  const memberCount = group?.members?.length ?? 0;
+  const canRegisterProject = memberCount >= minGroupSize && memberCount <= maxGroupSize;
 
   // Mutations
   const createGroup = useCreateGroup();
@@ -520,9 +528,22 @@ export default function StudentGroupPage() {
                           </div>
                         </div>
                         {isLeader && (
-                          <Link href="/student/project">
-                            <Button size="sm">Register Project</Button>
-                          </Link>
+                          canRegisterProject ? (
+                            <Link href="/student/project">
+                              <Button size="sm">Register Project</Button>
+                            </Link>
+                          ) : (
+                            <Button 
+                              size="sm" 
+                              disabled 
+                              title={memberCount < minGroupSize 
+                                ? `Need at least ${minGroupSize} member(s). Current: ${memberCount}`
+                                : `Too many members (max: ${maxGroupSize}). Current: ${memberCount}`
+                              }
+                            >
+                              Register Project
+                            </Button>
+                          )
                         )}
                       </div>
                     )}

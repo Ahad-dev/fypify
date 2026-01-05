@@ -49,7 +49,6 @@ import {
   useComputeFinalResult,
   useReleaseFinalResult,
   useProjectSubmissions,
-  useActiveDocumentTypes,
   useProjectDeadlines,
 } from '@/shared/hooks';
 import { useProjects } from '@/shared/hooks/useProject';
@@ -166,7 +165,7 @@ function SubmissionDetailsCard({ submission }: SubmissionDetailsCardProps) {
           <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
             <div className="flex items-center gap-2 min-w-0">
               <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="text-sm truncate">{submission.file.fileName}</span>
+              <span className="text-sm truncate">{submission.file.originalFilename}</span>
             </div>
             <Button variant="ghost" size="sm" asChild>
               <a href={submission.file.secureUrl} target="_blank" rel="noopener noreferrer">
@@ -231,15 +230,32 @@ function SubmissionDetailsCard({ submission }: SubmissionDetailsCardProps) {
 
             {/* Evaluation Progress */}
             {evalSummary && (
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{evalSummary.finalizedEvaluations}/{evalSummary.totalRequiredEvaluators} evaluators</span>
-                  <span>{Math.round((evalSummary.finalizedEvaluations / evalSummary.totalRequiredEvaluators) * 100)}%</span>
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{evalSummary.finalizedEvaluations}/{evalSummary.totalRequiredEvaluators} evaluators</span>
+                    <span>{Math.round((evalSummary.finalizedEvaluations / evalSummary.totalRequiredEvaluators) * 100)}%</span>
+                  </div>
+                  <Progress 
+                    value={(evalSummary.finalizedEvaluations / evalSummary.totalRequiredEvaluators) * 100} 
+                    className="h-1.5"
+                  />
                 </div>
-                <Progress 
-                  value={(evalSummary.finalizedEvaluations / evalSummary.totalRequiredEvaluators) * 100} 
-                  className="h-1.5"
-                />
+                
+                {/* Overall Evaluation Status */}
+                {evalSummary.finalizedEvaluations === evalSummary.totalRequiredEvaluators && supervisorScore != null ? (
+                  <div className="flex items-center gap-2 text-xs text-green-600 font-medium">
+                    <CheckCircle className="h-3 w-3" />
+                    <span>All evaluations complete (Supervisor + {evalSummary.totalRequiredEvaluators} Evaluators)</span>
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    {supervisorScore == null && 'Waiting for supervisor marks. '}
+                    {evalSummary.finalizedEvaluations < evalSummary.totalRequiredEvaluators && 
+                      `${evalSummary.totalRequiredEvaluators - evalSummary.finalizedEvaluations} evaluator(s) pending.`
+                    }
+                  </div>
+                )}
               </div>
             )}
 
@@ -286,47 +302,50 @@ interface ProjectSubmissionsSheetProps {
 
 function ProjectSubmissionsSheet({ project, open, onOpenChange }: ProjectSubmissionsSheetProps) {
   const { data: submissions, isLoading } = useProjectSubmissions(project?.id || '');
-  const { data: documentTypes } = useActiveDocumentTypes();
   const { data: deadlines } = useProjectDeadlines(project?.id || '');
 
-  // Group submissions by document type
+  // Group submissions by document type (only for deadlines in this project's batch)
   const submissionsByType = React.useMemo(() => {
-    if (!submissions || !documentTypes) return new Map<string, DocumentSubmission[]>();
+    if (!submissions || !deadlines) return new Map<string, DocumentSubmission[]>();
     
     const map = new Map<string, DocumentSubmission[]>();
-    for (const docType of documentTypes) {
-      const typeSubmissions = submissions.filter(s => s.documentTypeId === docType.id);
+    for (const deadline of deadlines) {
+      const typeSubmissions = submissions.filter(s => s.documentTypeId === deadline.documentTypeId);
       if (typeSubmissions.length > 0) {
-        map.set(docType.id, typeSubmissions);
+        map.set(deadline.documentTypeId, typeSubmissions);
       }
     }
     return map;
-  }, [submissions, documentTypes]);
+  }, [submissions, deadlines]);
 
-  // Calculate completion percentage
+  // Calculate completion percentage based on project's deadline batch
   const completionStats = React.useMemo(() => {
-    if (!documentTypes || !submissions) {
-      return { total: 0, submitted: 0, evaluated: 0, percentage: 0 };
+    if (!deadlines || deadlines.length === 0) {
+      return { total: 0, submitted: 0, evaluated: 0, percentage: 0, hasDeadlineBatch: false };
     }
 
-    const total = documentTypes.length;
-    const submitted = new Set(submissions.map(s => s.documentTypeId)).size;
-    const uniqueEvaluated = new Set(
-      submissions.filter(s => s.status === 'EVAL_FINALIZED').map(s => s.documentTypeId)
-    ).size;
+    // Total = number of document types in project's deadline batch
+    const total = deadlines.length;
+    
+    // Get document type IDs required for this project
+    const requiredDocTypeIds = new Set(deadlines.map(d => d.documentTypeId));
+    
+    // Count submitted and evaluated (only for required document types)
+    const submittedDocTypes = new Set(
+      (submissions || []).filter(s => requiredDocTypeIds.has(s.documentTypeId)).map(s => s.documentTypeId)
+    );
+    const evaluatedDocTypes = new Set(
+      (submissions || []).filter(s => requiredDocTypeIds.has(s.documentTypeId) && s.status === 'EVAL_FINALIZED').map(s => s.documentTypeId)
+    );
 
     return {
       total,
-      submitted,
-      evaluated: uniqueEvaluated,
-      percentage: total > 0 ? Math.round((uniqueEvaluated / total) * 100) : 0,
+      submitted: submittedDocTypes.size,
+      evaluated: evaluatedDocTypes.size,
+      percentage: total > 0 ? Math.round((evaluatedDocTypes.size / total) * 100) : 0,
+      hasDeadlineBatch: true,
     };
-  }, [documentTypes, submissions]);
-
-  // Get deadline info for a document type
-  const getDeadlineForType = (docTypeId: string): ProjectDeadline | undefined => {
-    return deadlines?.find(d => d.documentTypeId === docTypeId);
-  };
+  }, [deadlines, submissions]);
 
   // Early return AFTER all hooks
   if (!project) return null;
@@ -367,42 +386,56 @@ function ProjectSubmissionsSheet({ project, open, onOpenChange }: ProjectSubmiss
 
           <Separator className="my-4" />
 
-          {/* Submissions List */}
+          {/* No Deadline Batch Warning */}
+          {!completionStats.hasDeadlineBatch && (
+            <Card className="border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20 mb-4">
+              <CardContent className="py-4">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="h-5 w-5 text-yellow-600" />
+                  <div>
+                    <p className="font-medium text-yellow-800 dark:text-yellow-200">No Deadline Batch Assigned</p>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                      This project does not have a deadline batch assigned. Completion cannot be calculated.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Submissions List - Based on Project's Deadline Batch */}
           {isLoading ? (
             <div className="space-y-4">
               {[1, 2, 3].map(i => (
                 <Skeleton key={i} className="h-48 w-full" />
               ))}
             </div>
-          ) : submissions && submissions.length > 0 ? (
+          ) : deadlines && deadlines.length > 0 ? (
             <div className="space-y-4">
-              {/* Document Types with Submissions */}
-              {documentTypes?.map(docType => {
-                const typeSubmissions = submissionsByType.get(docType.id);
-                const deadline = getDeadlineForType(docType.id);
+              {/* Document Types from Project's Deadline Batch */}
+              {deadlines.map(deadline => {
+                const typeSubmissions = submissionsByType.get(deadline.documentTypeId);
                 
                 if (!typeSubmissions || typeSubmissions.length === 0) {
                   // Show missing document types
                   return (
-                    <Card key={docType.id} className="border-dashed opacity-60">
+                    <Card key={deadline.id} className="border-dashed opacity-60">
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-muted-foreground" />
                             <CardTitle className="text-base text-muted-foreground">
-                              {docType.title}
+                              {deadline.documentTypeTitle}
                             </CardTitle>
                           </div>
                           <Badge variant="outline">Not Submitted</Badge>
                         </div>
-                        {deadline && (
-                          <CardDescription className="text-xs">
-                            Deadline: {format(new Date(deadline.deadlineDate), 'MMM d, yyyy')}
-                            {deadline.isPast && (
-                              <span className="text-red-500 ml-2">• Overdue</span>
-                            )}
-                          </CardDescription>
-                        )}
+                        <CardDescription className="text-xs">
+                          Deadline: {format(new Date(deadline.deadlineDate), 'MMM d, yyyy')}
+                          {deadline.isPast && (
+                            <span className="text-red-500 ml-2">• Overdue</span>
+                          )}
+                        </CardDescription>
                       </CardHeader>
                     </Card>
                   );
@@ -415,7 +448,7 @@ function ProjectSubmissionsSheet({ project, open, onOpenChange }: ProjectSubmiss
 
                 return (
                   <SubmissionDetailsCard 
-                    key={docType.id} 
+                    key={deadline.id} 
                     submission={latestSubmission} 
                   />
                 );
@@ -424,7 +457,7 @@ function ProjectSubmissionsSheet({ project, open, onOpenChange }: ProjectSubmiss
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No submissions found</p>
+              <p>{completionStats.hasDeadlineBatch ? 'No submissions found' : 'No deadline batch assigned to this project'}</p>
             </div>
           )}
         </ScrollArea>
@@ -444,7 +477,7 @@ function ProjectResultCard({
 }) {
   const { data: result, isLoading } = useFinalResult(project.id);
   const { data: submissions } = useProjectSubmissions(project.id);
-  const { data: documentTypes } = useActiveDocumentTypes();
+  const { data: deadlines } = useProjectDeadlines(project.id);
   const computeMutation = useComputeFinalResult();
   const releaseMutation = useReleaseFinalResult();
 
@@ -456,25 +489,34 @@ function ProjectResultCard({
     releaseMutation.mutate(project.id);
   };
 
-  // Calculate completion stats
+  // Calculate completion stats based on project's deadline batch
   const completionStats = React.useMemo(() => {
-    if (!documentTypes || !submissions) {
-      return { percentage: 0, submitted: 0, total: 0, evaluated: 0 };
+    if (!deadlines || deadlines.length === 0) {
+      return { percentage: 0, submitted: 0, total: 0, evaluated: 0, hasDeadlineBatch: false };
     }
 
-    const total = documentTypes.length;
-    const submitted = new Set(submissions.map(s => s.documentTypeId)).size;
-    const evaluated = new Set(
-      submissions.filter(s => s.status === 'EVAL_FINALIZED').map(s => s.documentTypeId)
-    ).size;
+    // Total = number of document types in this project's deadline batch
+    const total = deadlines.length;
+    
+    // Get document type IDs required for this project
+    const requiredDocTypeIds = new Set(deadlines.map(d => d.documentTypeId));
+    
+    // Count submitted and evaluated (only for required document types)
+    const submittedDocTypes = new Set(
+      (submissions || []).filter(s => requiredDocTypeIds.has(s.documentTypeId)).map(s => s.documentTypeId)
+    );
+    const evaluatedDocTypes = new Set(
+      (submissions || []).filter(s => requiredDocTypeIds.has(s.documentTypeId) && s.status === 'EVAL_FINALIZED').map(s => s.documentTypeId)
+    );
 
     return {
-      percentage: total > 0 ? Math.round((evaluated / total) * 100) : 0,
-      submitted,
+      percentage: total > 0 ? Math.round((evaluatedDocTypes.size / total) * 100) : 0,
+      submitted: submittedDocTypes.size,
       total,
-      evaluated,
+      evaluated: evaluatedDocTypes.size,
+      hasDeadlineBatch: true,
     };
-  }, [documentTypes, submissions]);
+  }, [deadlines, submissions]);
 
   // Get completion color
   const getCompletionColor = (percentage: number) => {
@@ -529,8 +571,8 @@ function ProjectResultCard({
               <Button 
                 size="sm" 
                 onClick={handleCompute}
-                disabled={computeMutation.isPending || completionStats.percentage < 100}
-                title={completionStats.percentage < 100 ? 'All documents must be evaluated' : 'Compute final result'}
+                disabled={computeMutation.isPending || !completionStats.hasDeadlineBatch || completionStats.percentage < 100}
+                title={!completionStats.hasDeadlineBatch ? 'No deadline batch assigned' : completionStats.percentage < 100 ? 'All documents must be evaluated' : 'Compute final result'}
               >
                 {computeMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-1" />
@@ -561,20 +603,29 @@ function ProjectResultCard({
       <CardContent>
         {/* Completion Progress Bar */}
         <div className="mb-4 p-3 bg-muted/50 rounded-lg">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Completion Progress</span>
+          {!completionStats.hasDeadlineBatch ? (
+            <div className="flex items-center gap-2 text-yellow-600">
+              <AlertCircle className="h-4 w-4" />
+              <span className="text-sm">No deadline batch assigned</span>
             </div>
-            <span className={`text-sm font-bold ${getCompletionColor(completionStats.percentage)}`}>
-              {completionStats.percentage}%
-            </span>
-          </div>
-          <Progress value={completionStats.percentage} className="h-2" />
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>{completionStats.submitted}/{completionStats.total} submitted</span>
-            <span>{completionStats.evaluated}/{completionStats.total} evaluated</span>
-          </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Completion Progress</span>
+                </div>
+                <span className={`text-sm font-bold ${getCompletionColor(completionStats.percentage)}`}>
+                  {completionStats.percentage}%
+                </span>
+              </div>
+              <Progress value={completionStats.percentage} className="h-2" />
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                <span>{completionStats.submitted}/{completionStats.total} submitted</span>
+                <span>{completionStats.evaluated}/{completionStats.total} evaluated</span>
+              </div>
+            </>
+          )}
         </div>
 
         {isLoading ? (
@@ -603,7 +654,11 @@ function ProjectResultCard({
           <div className="text-center py-4 text-muted-foreground">
             <AlertCircle className="h-6 w-6 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No results computed yet</p>
-            {completionStats.percentage < 100 ? (
+            {!completionStats.hasDeadlineBatch ? (
+              <p className="text-xs mt-1">
+                Assign a deadline batch to this project first
+              </p>
+            ) : completionStats.percentage < 100 ? (
               <p className="text-xs mt-1">
                 Complete all evaluations ({completionStats.evaluated}/{completionStats.total}) before computing
               </p>

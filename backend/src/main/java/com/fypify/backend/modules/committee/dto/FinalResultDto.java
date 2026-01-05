@@ -15,7 +15,7 @@ import java.util.UUID;
 @Builder
 public class FinalResultDto {
     
-    private Long id;
+    private UUID id;
     private UUID projectId;
     private String projectTitle;
     private BigDecimal totalScore;

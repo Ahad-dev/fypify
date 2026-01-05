@@ -245,3 +245,15 @@ export function useReleaseFinalResult() {
   });
 }
 
+/**
+ * Hook to get released final result for a project (student/supervisor view)
+ */
+export function useReleasedResult(projectId: string) {
+  return useQuery({
+    queryKey: [...QUERY_KEYS.committee.finalResults.byProject(projectId), 'released'],
+    queryFn: () => committeeService.getReleasedResult(projectId),
+    enabled: !!projectId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+

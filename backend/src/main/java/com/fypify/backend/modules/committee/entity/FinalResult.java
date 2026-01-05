@@ -49,8 +49,8 @@ import java.util.UUID;
 public class FinalResult {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false, unique = true)

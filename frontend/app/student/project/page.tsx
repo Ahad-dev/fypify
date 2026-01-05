@@ -47,6 +47,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useSystemSettingsContext } from '@/contexts/SystemSettingsContext';
 import { useMyGroup, useProjectByGroup, useRegisterProject, useUpdateProject, useDeleteProject, useProject, useSupervisors, useResubmitProject } from '@/shared/hooks';
 import { ProjectStatus } from '@/shared/types';
 import Link from 'next/link';
@@ -93,10 +94,22 @@ function StatusBadge({ status }: { status: ProjectStatus }) {
 
 export default function StudentProjectPage() {
   const { user } = useAuthContext();
+  const { getGroupMinSize, getGroupMaxSize } = useSystemSettingsContext();
   const [isEditing, setIsEditing] = useState(false);
 
   // Queries
   const { data: group, isLoading: isLoadingGroup } = useMyGroup();
+  
+  // Group size validation
+  const minGroupSize = getGroupMinSize();
+  const maxGroupSize = getGroupMaxSize();
+  const memberCount = group?.members?.length ?? 0;
+  const isGroupSizeValid = memberCount >= minGroupSize && memberCount <= maxGroupSize;
+  const groupSizeMessage = memberCount < minGroupSize 
+    ? `Your group needs at least ${minGroupSize} member(s) to register a project. Current: ${memberCount}`
+    : memberCount > maxGroupSize 
+    ? `Your group has too many members (max: ${maxGroupSize}). Current: ${memberCount}`
+    : null;
   const { data: project, isLoading: isLoadingProject, refetch: refetchProject } = useProject(group?.projectId || '');
   const { data: supervisors, isLoading: isLoadingSupervisors } = useSupervisors();
   // Mutations
@@ -284,16 +297,39 @@ export default function StudentProjectPage() {
                 </CardContent>
               </Card>
             ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Project Registration Form</CardTitle>
-                  <CardDescription>
-                    Fill in the details below to register your project. Once submitted, it will be
-                    reviewed by the FYP Committee.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...form}>
+              <>
+                {/* Group Size Warning */}
+                {!isGroupSizeValid && (
+                  <Card className="border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-4">
+                        <AlertCircle className="h-6 w-6 text-yellow-600" />
+                        <div>
+                          <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">
+                            Group Size Requirement Not Met
+                          </h3>
+                          <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                            {groupSizeMessage}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Required group size: {minGroupSize} - {maxGroupSize} members
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Project Registration Form</CardTitle>
+                    <CardDescription>
+                      Fill in the details below to register your project. Once submitted, it will be
+                      reviewed by the FYP Committee.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                       <FormField
                         control={form.control}
@@ -381,7 +417,11 @@ export default function StudentProjectPage() {
                       />
 
                       <div className="flex justify-end gap-2">
-                        <Button type="submit" disabled={registerProject.isPending}>
+                        <Button 
+                          type="submit" 
+                          disabled={registerProject.isPending || !isGroupSizeValid}
+                          title={!isGroupSizeValid ? groupSizeMessage ?? 'Group size requirement not met' : undefined}
+                        >
                           {registerProject.isPending && (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           )}
@@ -392,6 +432,7 @@ export default function StudentProjectPage() {
                   </Form>
                 </CardContent>
               </Card>
+              </>
             )}
           </div>
         </MainLayout>

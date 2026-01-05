@@ -83,10 +83,18 @@ public class FileUploadService {
         validateFile(file);
 
         try {
+            String contentType = file.getContentType();
+            boolean isPdf = "application/pdf".equals(contentType);
+            String folderPath = folder != null ? "fypify/" + folder : "fypify/uploads";
+            
             // Prepare upload options
+            // PDFs: upload as "image" type so they display in browser with format pdf
+            // NOTE: Requires Cloudinary preset incoming transformation to be either:
+            //   - Empty (removed)
+            //   - OR conditional: if_ar_gt_0/c_scale,w_800/q_auto/if_end
             Map<String, Object> uploadOptions = ObjectUtils.asMap(
-                    "resource_type", "auto",
-                    "folder", folder != null ? "fypify/" + folder : "fypify/uploads",
+                    "resource_type", isPdf ? "image" : "auto",
+                    "folder", folderPath,
                     "use_filename", true,
                     "unique_filename", true
             );

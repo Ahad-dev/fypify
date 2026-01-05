@@ -253,7 +253,7 @@ export function FileUploader({
                   File uploaded successfully!
                 </p>
                 <p className="text-xs text-green-600 dark:text-green-400 truncate">
-                  {uploadedFile.fileName}
+                  {uploadedFile.originalFilename ?? ''}
                 </p>
               </div>
               <Button

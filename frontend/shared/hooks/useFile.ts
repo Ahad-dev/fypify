@@ -42,7 +42,7 @@ export function useUploadFile() {
     },
     onSuccess: (uploadedFile) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.files.all });
-      toast.success(`File "${uploadedFile.fileName}" uploaded successfully!`);
+      toast.success(`File "${uploadedFile.originalFilename}" uploaded successfully!`);
       // Don't reset immediately - let the component handle it
     },
     onError: (error: any) => {

@@ -9,7 +9,7 @@ export interface CloudinaryFile {
   id: string;
   publicId: string;
   secureUrl: string;
-  fileName: string;
+  originalFilename: string;
   resourceType: string;
   format: string;
   bytes: number;

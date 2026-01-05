@@ -16,7 +16,10 @@ import { toast } from 'sonner';
 export function useMyGroup() {
   return useQuery({
     queryKey: QUERY_KEYS.groups.my(),
-    queryFn: groupService.getMyGroup,
+    queryFn: async () => {
+      const result = await groupService.getMyGroup();
+      return result ?? null; // Ensure we never return undefined
+    },
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
@@ -209,7 +212,7 @@ export function useSendInvite() {
       toast.success(`Invitation sent to ${invite.inviteeName}`);
     },
     onError: (error: any) => {
-      const message = error?.message || error?.response?.data?.message || 'Failed to send invitation';
+      const message =  error?.response?.data?.error.message || 'Failed to send invitation';
       toast.error(message);
     },
   });

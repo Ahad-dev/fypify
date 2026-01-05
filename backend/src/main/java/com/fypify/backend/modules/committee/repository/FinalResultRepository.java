@@ -13,7 +13,7 @@ import java.util.UUID;
  * Repository for FinalResult entity.
  */
 @Repository
-public interface FinalResultRepository extends JpaRepository<FinalResult, Long> {
+public interface FinalResultRepository extends JpaRepository<FinalResult, UUID> {
 
     /**
      * Find final result by project ID.
@@ -24,8 +24,7 @@ public interface FinalResultRepository extends JpaRepository<FinalResult, Long> 
     /**
      * Check if result exists for project.
      */
-    @Query("SELECT COUNT(fr) > 0 FROM FinalResult fr WHERE fr.project.id = :projectId")
-    boolean existsByProjectId(@Param("projectId") UUID projectId);
+    boolean existsByProjectId(UUID projectId);
 
     /**
      * Find released result by project ID (for student view).

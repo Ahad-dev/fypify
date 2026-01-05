@@ -29,6 +29,7 @@ const COMMITTEE_ENDPOINTS = {
   COMPUTE_FINAL: (projectId: string) => `/committee/fyp/projects/${projectId}/compute-final`,
   RELEASE_FINAL: (projectId: string) => `/committee/fyp/projects/${projectId}/release-final`,
   GET_RESULT: (projectId: string) => `/committee/fyp/projects/${projectId}/result`,
+  GET_RELEASED_RESULT: (projectId: string) => `/committee/fyp/projects/${projectId}/released-result`,
 } as const;
 
 /**
@@ -178,6 +179,23 @@ export const committeeService = {
         COMMITTEE_ENDPOINTS.GET_RESULT(projectId)
       );
       // Ensure we return null instead of undefined for React Query
+      return response.data.data ?? null;
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * Get released final result for a project (student/supervisor view)
+   */
+  getReleasedResult: async (projectId: string): Promise<FinalResult | null> => {
+    try {
+      const response = await api.get<ApiResponse<FinalResult>>(
+        COMMITTEE_ENDPOINTS.GET_RELEASED_RESULT(projectId)
+      );
       return response.data.data ?? null;
     } catch (error: any) {
       if (error?.response?.status === 404) {

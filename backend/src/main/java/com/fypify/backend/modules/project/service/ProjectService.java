@@ -3,6 +3,7 @@ package com.fypify.backend.modules.project.service;
 import com.fypify.backend.common.exception.BusinessRuleException;
 import com.fypify.backend.common.exception.ConflictException;
 import com.fypify.backend.common.exception.ResourceNotFoundException;
+import com.fypify.backend.modules.admin.repository.SystemSettingRepository;
 import com.fypify.backend.modules.admin.service.AuditLogService;
 import com.fypify.backend.modules.email.service.EmailService;
 import com.fypify.backend.modules.group.dto.GroupDto;
@@ -44,6 +45,10 @@ public class ProjectService {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final AuditLogService auditLogService;
+    private final SystemSettingRepository settingRepository;
+
+    private static final int DEFAULT_MIN_GROUP_SIZE = 1;
+    private static final int DEFAULT_MAX_GROUP_SIZE = 4;
 
     // ==================== Project CRUD Operations ====================
 
@@ -136,6 +141,21 @@ public class ProjectService {
         // Check if group already has a project
         if (projectRepository.existsByGroupId(request.getGroupId())) {
             throw new ConflictException("This group already has a registered project");
+        }
+
+        // Validate group size meets requirements
+        int memberCount = group.getMembers().size();
+        int minSize = getMinGroupSize();
+        int maxSize = getMaxGroupSize();
+        
+        if (memberCount < minSize) {
+            throw new BusinessRuleException("INSUFFICIENT_MEMBERS", 
+                    String.format("Group must have at least %d member(s) to register a project. Current: %d", minSize, memberCount));
+        }
+        
+        if (memberCount > maxSize) {
+            throw new BusinessRuleException("TOO_MANY_MEMBERS", 
+                    String.format("Group cannot have more than %d members. Current: %d", maxSize, memberCount));
         }
 
         // Validate proposed supervisors if provided
@@ -521,5 +541,25 @@ public class ProjectService {
             case COMPLETED -> "Completed";
             case ARCHIVED -> "Archived";
         };
+    }
+
+    // ==================== Utility Methods ====================
+
+    /**
+     * Get minimum group size from system settings.
+     */
+    private int getMinGroupSize() {
+        return settingRepository.findById("group_min_size")
+                .map(s -> s.getValueAsInteger())
+                .orElse(DEFAULT_MIN_GROUP_SIZE);
+    }
+
+    /**
+     * Get maximum group size from system settings.
+     */
+    private int getMaxGroupSize() {
+        return settingRepository.findById("group_max_size")
+                .map(s -> s.getValueAsInteger())
+                .orElse(DEFAULT_MAX_GROUP_SIZE);
     }
 }

@@ -10,7 +10,9 @@ import com.fypify.backend.modules.admin.repository.DocumentTypeRepository;
 import com.fypify.backend.modules.committee.dto.FinalResultDetailsDto;
 import com.fypify.backend.modules.committee.dto.FinalResultDto;
 import com.fypify.backend.modules.committee.entity.FinalResult;
+import com.fypify.backend.modules.committee.entity.ProjectDeadline;
 import com.fypify.backend.modules.committee.repository.FinalResultRepository;
+import com.fypify.backend.modules.committee.repository.ProjectDeadlineRepository;
 import com.fypify.backend.modules.group.entity.StudentGroup;
 import com.fypify.backend.modules.notification.entity.NotificationType;
 import com.fypify.backend.modules.notification.service.NotificationService;
@@ -33,6 +35,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Service for computing and releasing final results.
@@ -48,12 +51,14 @@ public class FinalResultService {
     private final EvaluationMarksRepository evaluationMarksRepository;
     private final SupervisorMarksRepository supervisorMarksRepository;
     private final DocumentTypeRepository documentTypeRepository;
+    private final ProjectDeadlineRepository projectDeadlineRepository;
     private final NotificationService notificationService;
     private final ObjectMapper objectMapper;
 
     /**
      * Compute final result for a project.
-     * Requires all finalized submissions with supervisor and committee marks.
+     * Requires all document types from the project's deadline batch to have
+     * finalized submissions with supervisor and committee marks.
      */
     @Transactional
     public FinalResultDto computeFinalResult(UUID projectId, User computedBy) {
@@ -64,21 +69,63 @@ public class FinalResultService {
             throw new ConflictException("Final result already computed for this project. Use update endpoint to recompute.");
         }
 
-        // 2. Get project
+        // 2. Get project with deadline batch
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-        // 3. Get all finalized submissions for project
-        List<DocumentSubmission> submissions = submissionRepository.findByProjectId(projectId).stream()
+        // 3. Validate project has a deadline batch assigned
+        if (project.getDeadlineBatch() == null) {
+            throw new BusinessRuleException("NO_DEADLINE_BATCH", "Project does not have a deadline batch assigned");
+        }
+
+        // 4. Get required document types from project's deadline batch
+        List<ProjectDeadline> deadlines = projectDeadlineRepository.findByBatchIdWithDocumentType(
+                project.getDeadlineBatch().getId());
+        
+        if (deadlines.isEmpty()) {
+            throw new BusinessRuleException("NO_DEADLINES", "No deadlines found in the project's deadline batch");
+        }
+        
+        Set<UUID> requiredDocTypeIds = deadlines.stream()
+                .map(d -> d.getDocumentType().getId())
+                .collect(Collectors.toSet());
+        
+        log.info("Project {} requires {} document types from deadline batch", projectId, requiredDocTypeIds.size());
+
+        // 5. Get all finalized submissions for project
+        List<DocumentSubmission> allSubmissions = submissionRepository.findByProjectId(projectId).stream()
                 .filter(s -> s.getStatus() == SubmissionStatus.EVAL_FINALIZED)
                 .filter(DocumentSubmission::getIsFinal) // Only final versions
                 .toList();
 
-        if (submissions.isEmpty()) {
+        if (allSubmissions.isEmpty()) {
             throw new BusinessRuleException("NO_FINALIZED_SUBMISSIONS", "No finalized submissions found for this project");
         }
 
-        // 4. Calculate weighted scores for each submission
+        // 6. Filter submissions to only include those for required document types
+        List<DocumentSubmission> submissions = allSubmissions.stream()
+                .filter(s -> requiredDocTypeIds.contains(s.getDocumentType().getId()))
+                .toList();
+        
+        // 7. Validate all required document types have finalized submissions
+        Set<UUID> finalizedDocTypeIds = submissions.stream()
+                .map(s -> s.getDocumentType().getId())
+                .collect(Collectors.toSet());
+        
+        Set<UUID> missingDocTypes = new HashSet<>(requiredDocTypeIds);
+        missingDocTypes.removeAll(finalizedDocTypeIds);
+        
+        if (!missingDocTypes.isEmpty()) {
+            // Get names of missing document types
+            List<String> missingNames = deadlines.stream()
+                    .filter(d -> missingDocTypes.contains(d.getDocumentType().getId()))
+                    .map(d -> d.getDocumentType().getTitle())
+                    .toList();
+            throw new BusinessRuleException("INCOMPLETE_EVALUATIONS", 
+                    "Not all required documents are evaluated. Missing: " + String.join(", ", missingNames));
+        }
+
+        // 8. Calculate weighted scores for each submission
         List<FinalResultDetailsDto.DocumentScoreBreakdown> breakdowns = new ArrayList<>();
         BigDecimal totalWeightedScore = BigDecimal.ZERO;
         int totalWeight = 0;

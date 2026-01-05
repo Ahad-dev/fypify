@@ -339,6 +339,10 @@ public class SubmissionService {
             existingMarks.setScore(score);
             supervisorMarksRepository.save(existingMarks);
             log.info("Updated supervisor marks for locked submission: submissionId={}, score={}", submissionId, score);
+            
+            // Check if this completes the evaluation (all evaluators + supervisor)
+            checkAndFinalizeSubmission(submissionId);
+            
             return toSupervisorMarksDto(existingMarks);
         } else {
             SupervisorMarks newMarks = SupervisorMarks.builder()
@@ -348,6 +352,10 @@ public class SubmissionService {
                     .build();
             supervisorMarksRepository.save(newMarks);
             log.info("Saved new supervisor marks for locked submission: submissionId={}, score={}", submissionId, score);
+            
+            // Check if this completes the evaluation (all evaluators + supervisor)
+            checkAndFinalizeSubmission(submissionId);
+            
             return toSupervisorMarksDto(newMarks);
         }
     }
@@ -939,7 +947,9 @@ public class SubmissionService {
     /**
      * Get evaluation summary for a submission.
      * Includes all required evaluators and who has/hasn't evaluated.
+     * Also auto-finalizes if all conditions are met.
      */
+    @Transactional
     public EvaluationSummaryDto getEvaluationSummary(UUID submissionId) {
         DocumentSubmission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
@@ -987,6 +997,14 @@ public class SubmissionService {
                 .orElse(null);
         boolean supervisorMarked = supervisorMarksDto != null;
 
+        // Auto-finalize if all conditions met but status not updated yet
+        if (allFinalized && supervisorMarked && submission.getStatus() == SubmissionStatus.EVAL_IN_PROGRESS) {
+            submission.finalizeEvaluation();
+            submissionRepository.save(submission);
+            log.info("Auto-finalized submission {} - all evaluators ({}) and supervisor have completed", 
+                    submissionId, totalRequired);
+        }
+
         return EvaluationSummaryDto.builder()
                 .submissionId(submissionId)
                 .submissionStatus(submission.getStatus().name())
@@ -1005,7 +1023,8 @@ public class SubmissionService {
 
     /**
      * Check if all evaluations are finalized and update submission status.
-     * Requires ALL evaluation committee members to have finalized their evaluations.
+     * Requires ALL evaluation committee members to have finalized their evaluations
+     * AND supervisor to have marked the submission.
      */
     private void checkAndFinalizeSubmission(UUID submissionId) {
         // Get total number of required evaluators (all EVALUATION_COMMITTEE members)
@@ -1015,8 +1034,11 @@ public class SubmissionService {
         long totalSubmitted = evaluationMarksRepository.countBySubmissionId(submissionId);
         long finalized = evaluationMarksRepository.countFinalizedBySubmissionId(submissionId);
         
-        // Only finalize submission when ALL committee members have finalized
-        if (totalRequired > 0 && finalized == totalRequired) {
+        // Check if supervisor has marked
+        boolean supervisorMarked = supervisorMarksRepository.existsBySubmissionId(submissionId);
+        
+        // Only finalize submission when ALL committee members have finalized AND supervisor has marked
+        if (totalRequired > 0 && finalized == totalRequired && supervisorMarked) {
             DocumentSubmission submission = submissionRepository.findById(submissionId).orElse(null);
             if (submission != null && submission.getStatus() == SubmissionStatus.EVAL_IN_PROGRESS) {
                 submission.finalizeEvaluation();
@@ -1026,15 +1048,15 @@ public class SubmissionService {
                 Double avgScore = evaluationMarksRepository.calculateAverageScoreBySubmissionId(submissionId)
                         .orElse(null);
                 
-                log.info("All {} evaluators have finalized for submission {}. Status updated to EVAL_FINALIZED. Average score: {}", 
+                log.info("All {} evaluators have finalized and supervisor marked for submission {}. Status updated to EVAL_FINALIZED. Average score: {}", 
                         totalRequired, submissionId, avgScore);
                 
                 // Notify project group about completion
                 notifyEvaluationComplete(submission, avgScore);
             }
         } else {
-            log.debug("Submission {} has {}/{} finalized evaluations (required: {})", 
-                    submissionId, finalized, totalSubmitted, totalRequired);
+            log.debug("Submission {} has {}/{} finalized evaluations (required: {}), supervisorMarked: {}", 
+                    submissionId, finalized, totalSubmitted, totalRequired, supervisorMarked);
         }
     }
     

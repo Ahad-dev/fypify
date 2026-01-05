@@ -173,8 +173,7 @@ export function useReviewSubmission() {
     },
     onError: (error: any) => {
       const message =
-        error?.message ||
-        error?.response?.data?.message ||
+        error?.response?.data?.error?.message ||
         'Failed to review submission';
       toast.error(message);
     },
