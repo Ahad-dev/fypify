@@ -344,7 +344,7 @@ export function Header() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
+              {/* <DropdownMenuItem asChild>
                 <Link 
                   href="/profile" 
                   className="flex items-center gap-2 cursor-pointer rounded-md transition-colors duration-150 hover:bg-primary/10 hover:text-primary focus:bg-primary/10 focus:text-primary"
@@ -361,8 +361,8 @@ export function Header() {
                   <Settings className="w-4 h-4" />
                   Settings
                 </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              </DropdownMenuItem> */}
+              {/* <DropdownMenuSeparator /> */}
               <DropdownMenuItem
                 onClick={() => logout()}
                 className="text-destructive cursor-pointer rounded-md transition-colors duration-150 hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive"

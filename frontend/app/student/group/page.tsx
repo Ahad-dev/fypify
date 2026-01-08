@@ -584,12 +584,12 @@ export default function StudentGroupPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem
+                                {/* <DropdownMenuItem
                                   onClick={() => handleTransferLeadership(member.studentId)}
                                 >
                                   <Crown className="mr-2 h-4 w-4" />
                                   Make Leader
-                                </DropdownMenuItem>
+                                </DropdownMenuItem> */}
                                 <DropdownMenuItem
                                   className="text-destructive"
                                   onClick={() => handleRemoveMember(member.studentId)}
