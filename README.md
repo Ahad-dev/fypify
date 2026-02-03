@@ -479,13 +479,6 @@ flowchart TB
 
 > Add screenshots of your application here
 
-```
-[ Dashboard Screenshot ]
-[ Project Management ]
-[ Evaluation Panel ]
-[ Admin Settings ]
-```
-
 ---
 
 ## 👥 Team
@@ -496,10 +489,10 @@ flowchart TB
 
 | Roll No | Name | Role |
 |---------|------|------|
-| 2023-SE-09 | Team Member | Developer |
-| 2023-SE-22 | Team Member | Developer |
-| 2023-SE-24 | Team Member | Developer |
-| 2023-SE-31 | Team Member | Developer |
+| 2023-SE-09 | Ahmed Javed | Developer |
+| 2023-SE-22 | Hafiz Abdullah | Developer |
+| 2023-SE-24 | Ahmed Raza | Developer |
+| 2023-SE-31 | Muhammad Ahad | Developer |
 
 ---
 
